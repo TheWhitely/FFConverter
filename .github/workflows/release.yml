@@ -81,7 +81,13 @@ jobs:
         shell: pwsh
         run: |
           $tag = $env:GITHUB_REF_NAME
-          gh release create $tag dist\FFConverter-portable.zip dist\latest.json runtime\FFmpeg-LICENSE.txt --repo $env:GITHUB_REPOSITORY --title "FFConverter $tag" --notes "Portable-версия FFConverter для Windows. Распакуйте ZIP и запустите FFConverter.exe."
+          $version = (Select-String -Path src-tauri\Cargo.toml -Pattern '^version = "([^"]+)"').Matches.Groups[1].Value
+          $changelog = [IO.File]::ReadAllText("$PWD\CHANGELOG.md")
+          $section = [regex]::Match($changelog, "(?ms)^## \[$([regex]::Escape($version))\][^\r\n]*\r?\n(.*?)(?=^## \[|\z)")
+          if (-not $section.Success) { throw "Добавьте версию $version в CHANGELOG.md" }
+          $notes = $section.Groups[1].Value.Trim()
+          $notes += "`n`n[Полный changelog](https://github.com/$env:GITHUB_REPOSITORY/blob/main/CHANGELOG.md)"
+          gh release create $tag dist\FFConverter-portable.zip dist\latest.json runtime\FFmpeg-LICENSE.txt --repo $env:GITHUB_REPOSITORY --title "FFConverter $tag" --notes $notes
 
       - name: Verify release assets
         shell: pwsh
