@@ -22,8 +22,13 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --version 2.12.4 --locked
+        run: npm install --global @tauri-apps/cli@2.12.4
 
       - name: Download FFmpeg
         shell: pwsh
@@ -40,7 +45,7 @@ jobs:
           if ($license) { Copy-Item $license.FullName runtime\FFmpeg-LICENSE.txt }
 
       - name: Build FFConverter
-        run: cargo tauri build --no-bundle
+        run: tauri build --no-bundle
 
       - name: Build updater
         run: cargo build --release --manifest-path src-tauri/Cargo.toml --bin updater
