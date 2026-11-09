@@ -1123,18 +1123,6 @@
   async function initializeDesktop() {
     if (!desktop) return;
     try {
-      const support = await invoke('encoder_support');
-      const nvidia = $('option', elements.encoder) && Array.from(elements.encoder.options).find((option) => option.value === 'NVIDIA NVENC');
-      const intel = Array.from(elements.encoder.options).find((option) => option.value === 'Intel Quick Sync');
-      if (nvidia) nvidia.disabled = !support.nvidia;
-      if (intel) intel.disabled = !support.intel;
-      $('#preset-grid [data-preset="nvidia"]').disabled = !support.nvidia;
-      $('#encoder-note').textContent = support.nvidia || support.intel
-        ? 'Доступно аппаратное кодирование. CPU обычно даёт меньший файл при том же качестве, GPU работает быстрее.'
-        : 'На этом компьютере доступен CPU. Он универсален и обычно эффективнее сжимает, но работает медленнее GPU.';
-      if (!support.av1) $('#preset-grid [data-preset="maximum"]').disabled = true;
-    } catch (error) { toast(String(error), 'warning'); }
-    try {
       state.settings = await invoke('load_settings');
       applyAccent(state.settings.accentColor);
       if (state.settings.codec) elements.codec.value = state.settings.codec;
@@ -1157,6 +1145,9 @@
       updateQuality(); updateCompressionSummary(); updateAudioSummary();
     } catch {}
     state.settingsReady = true;
+    const currentWindow = api.window.getCurrentWindow();
+    await currentWindow.show();
+    await currentWindow.setFocus();
     $('#context-menu-setting').addEventListener('change', async (event) => {
       const enabled = event.target.checked;
       try {
@@ -1184,7 +1175,7 @@
     });
     const updateError = await invoke('take_update_error');
     if (updateError) toast(`Обновление не установлено: ${updateError}`, 'error', { duration: 8000 });
-    api.window.getCurrentWindow().onDragDropEvent((event) => {
+    currentWindow.onDragDropEvent((event) => {
       if (event.payload.type === 'over') elements.dropZone.classList.add('dragover');
       if (event.payload.type === 'leave') elements.dropZone.classList.remove('dragover');
       if (event.payload.type === 'drop') {
@@ -1198,6 +1189,23 @@
       if (path) openMediaPath(path);
     } catch {}
     checkForUpdates(false);
+    try {
+      const support = await invoke('encoder_support');
+      const nvidia = Array.from(elements.encoder.options).find((option) => option.value === 'NVIDIA NVENC');
+      const intel = Array.from(elements.encoder.options).find((option) => option.value === 'Intel Quick Sync');
+      if (nvidia) nvidia.disabled = !support.nvidia;
+      if (intel) intel.disabled = !support.intel;
+      $('#preset-grid [data-preset="nvidia"]').disabled = !support.nvidia;
+      $('#encoder-note').textContent = support.nvidia || support.intel
+        ? 'Доступно аппаратное кодирование. CPU обычно даёт меньший файл при том же качестве, GPU работает быстрее.'
+        : 'На этом компьютере доступен CPU. Он универсален и обычно эффективнее сжимает, но работает медленнее GPU.';
+      if (!support.av1) $('#preset-grid [data-preset="maximum"]').disabled = true;
+      if (elements.encoder.selectedOptions[0]?.disabled) {
+        elements.encoder.value = 'CPU';
+        $$('#preset-grid button').forEach((button) => button.classList.remove('active'));
+        updateQuality(); updateCompressionSummary();
+      }
+    } catch (error) { toast(String(error), 'warning'); }
   }
 
   elements.fileInput.addEventListener('change', () => { handleFile(elements.fileInput.files[0]); elements.fileInput.value = ''; });
@@ -1371,6 +1379,7 @@
 
   $('#reset-settings').addEventListener('click', resetSettings);
   $('#help-button').addEventListener('click', () => openModal(elements.helpModal));
+  $('#welcome-help-button').addEventListener('click', () => openModal(elements.helpModal));
   $('#export-button').addEventListener('click', startExport);
   $('#loading-change-file').addEventListener('click', openFiles);
   $('#loading-home').addEventListener('click', showWelcome);

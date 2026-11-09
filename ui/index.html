@@ -34,7 +34,7 @@
       <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></symbol>
       <symbol id="i-back" viewBox="0 0 24 24"><path d="m11 7-5 5 5 5M18 7l-5 5 5 5"/></symbol>
       <symbol id="i-forward" viewBox="0 0 24 24"><path d="m6 7 5 5-5 5M13 7l5 5-5 5"/></symbol>
-      <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7a7 7 0 0 0-.7-1.6l.9-1.9-2.1-2.1-1.9.9a7 7 0 0 0-1.7-.7L10.5 2h-3l-.7 2a7 7 0 0 0-1.6.7l-1.9-.9-2.1 2.1.9 1.9a7 7 0 0 0-.7 1.7L-1 10.5v3l2 .7a7 7 0 0 0 .7 1.7l-.9 1.9 2.1 2.1 1.9-.9a7 7 0 0 0 1.6.7l.7 2h3l.7-2a7 7 0 0 0 1.7-.7l1.9.9 2.1-2.1-.9-1.9a7 7 0 0 0 .7-1.6l1.8-.7Z" transform="translate(4 0) scale(.8)"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.3a2 2 0 0 1-2 0h-.2a2 2 0 0 0-2.7.8l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.3a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.3a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.3a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></symbol>
       <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1.2-1.5 2.5M12 17h.01"/></symbol>
       <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 4v6h6M5.5 15a7 7 0 1 0 .5-7l-2 2"/></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
@@ -50,10 +50,10 @@
     <header class="app-header welcome-header" data-tauri-drag-region>
       <a class="brand" href="#" aria-label="FFConverter — главный экран">
         <span class="brand-mark"><span></span><span></span></span>
-        <span class="brand-name">FFCONVERTER</span>
       </a>
       <div class="titlebar-actions">
         <span class="portable-badge"><span class="status-dot"></span>PORTABLE</span>
+        <button class="icon-button" id="welcome-help-button" type="button" aria-label="Настройки"><svg class="icon"><use href="#i-settings"></use></svg></button>
         <div class="window-controls">
           <button data-window-action="minimize" type="button" aria-label="Свернуть"><svg class="icon"><use href="#i-minus"></use></svg></button>
           <button data-window-action="maximize" type="button" aria-label="Развернуть"><svg class="icon"><use href="#i-expand"></use></svg></button>
@@ -76,7 +76,7 @@
         <div class="format-list"><span>MP4</span><i></i><span>MKV</span><i></i><span>MOV</span><i></i><span>AVI</span><i></i><span>WEBM</span></div>
       </div>
     </main>
-    <footer class="welcome-footer"><span>Локальный видеоконвертер</span><span>Версия 1.0</span></footer>
+    <footer class="welcome-footer"><span>Локальный видеоконвертер</span><span>Версия 1.0.1</span></footer>
   </section>
 
   <section class="workspace" id="workspace" aria-label="Рабочая область" hidden>
@@ -84,7 +84,6 @@
       <div class="header-left">
         <button class="brand brand-button" id="home-button" type="button" aria-label="Вернуться на главный экран">
           <span class="brand-mark"><span></span><span></span></span>
-          <span class="brand-name">FFCONVERTER</span>
         </button>
         <span class="header-divider"></span>
         <div class="file-identity"><svg class="icon"><use href="#i-film"></use></svg><div><strong id="header-file-name">Showreel_2026.mp4</strong><span id="header-file-meta">MP4 · 48,2 МБ</span></div></div>
@@ -92,7 +91,7 @@
       <div class="header-actions">
         <span class="saved-status"><span class="status-dot"></span><span id="workspace-mode">Демо-режим</span></span>
         <button class="btn btn-dark btn-sm" id="change-file-button" type="button"><svg class="icon"><use href="#i-folder"></use></svg>Сменить файл</button>
-        <button class="icon-button" id="help-button" type="button" aria-label="Справка"><svg class="icon"><use href="#i-help"></use></svg></button>
+        <button class="icon-button" id="help-button" type="button" aria-label="Настройки"><svg class="icon"><use href="#i-settings"></use></svg></button>
         <div class="window-controls">
           <button data-window-action="minimize" type="button" aria-label="Свернуть"><svg class="icon"><use href="#i-minus"></use></svg></button>
           <button data-window-action="maximize" type="button" aria-label="Развернуть"><svg class="icon"><use href="#i-expand"></use></svg></button>
@@ -297,7 +296,7 @@
       <span class="eyebrow modal-eyebrow">Настройки</span><h2 id="help-modal-title">FFConverter</h2>
       <label class="accent-setting" for="accent-color"><span><strong>Акцентный цвет</strong><small>Основной цвет интерфейса</small></span><span class="accent-picker"><input id="accent-color" type="color" value="#fa5782"><span id="accent-value">#FA5782</span></span></label>
       <section class="update-setting" aria-label="Обновления">
-        <div class="update-setting-row"><div><strong>Обновления</strong><span id="update-status">Версия 1.0.0</span></div><button class="btn btn-dark btn-sm" id="update-check" type="button">Проверить</button></div>
+        <div class="update-setting-row"><div><strong>Обновления</strong><span id="update-status">Версия 1.0.1</span></div><button class="btn btn-dark btn-sm" id="update-check" type="button">Проверить</button></div>
         <div class="update-progress" id="update-progress" hidden><div class="update-progress-track"><span id="update-progress-bar"></span></div><span id="update-progress-value">0%</span></div>
       </section>
       <div class="shortcut-list"><div><span>Воспроизведение / пауза</span><kbd>Пробел</kbd></div><div><span>Перемотка на 5 секунд</span><span><kbd>←</kbd> <kbd>→</kbd></span></div><div><span>Сбросить обрезку</span><kbd>R</kbd></div><div><span>Закрыть окно</span><kbd>Esc</kbd></div></div>
