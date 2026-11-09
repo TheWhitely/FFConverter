@@ -1,14 +1,8 @@
 <div align="center">
-  <img src="ui/icon.png" alt="FFConverter" width="76">
   <h1>FFConverter</h1>
   <p>Локальный видеоконвертер для Windows на базе FFmpeg.</p>
   <p>
     <a href="https://github.com/TheWhitely/FFConverter/releases/latest"><strong>Скачать последнюю версию</strong></a>
-  </p>
-  <p>
-    <img src="https://img.shields.io/github/v/release/TheWhitely/FFConverter?label=release" alt="Последний релиз">
-    <img src="https://img.shields.io/badge/platform-Windows-2f81f7" alt="Windows">
-    <img src="https://img.shields.io/badge/Tauri-2-ffc832" alt="Tauri 2">
   </p>
 </div>
 
