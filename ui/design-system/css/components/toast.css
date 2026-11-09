@@ -1,0 +1,30 @@
+/* Тосты (toast()).
+   Вся анимация — появление, исчезание и сдвиг стопки — выполняется через
+   Web Animations API в toast.js одной системой, поэтому здесь нет keyframes:
+   именно конфликт CSS-анимаций и WAAPI-трансформаций вызывал мерцание в v1. */
+.toast-zone{
+  position:fixed;bottom:26px;right:40px;z-index:110;
+  display:flex;flex-direction:column;align-items:flex-end;gap:10px;
+  pointer-events:none;
+}
+.toast{
+  position:relative;pointer-events:auto;cursor:pointer;
+  display:flex;align-items:center;gap:12px;
+  background:#212121;border:1px solid var(--border);
+  border-left:3px solid var(--accent);
+  border-radius:12px;padding:14px 20px 14px 18px;
+  font-size:14px;font-weight:500;min-width:250px;
+  max-width:min(420px,calc(100vw - 56px));
+  box-shadow:0 10px 28px rgba(0,0,0,.28);
+  will-change:transform,opacity;
+}
+.toast .t-ico{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+.toast .t-ico svg{width:13px;height:13px;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.toast.t-success .t-ico{background:rgba(74,222,128,.12);color:var(--success)}
+.toast.t-error .t-ico{background:rgba(248,113,113,.12);color:var(--error)}
+.toast.t-warning .t-ico{background:rgba(251,191,36,.12);color:var(--warning)}
+.toast.t-info .t-ico{background:var(--accent-soft);color:var(--accent)}
+.toast.t-success{border-left-color:var(--success)}
+.toast.t-error{border-left-color:var(--error)}
+.toast.t-warning{border-left-color:var(--warning)}
+.toast.t-info{border-left-color:var(--accent)}

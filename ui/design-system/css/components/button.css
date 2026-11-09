@@ -1,0 +1,40 @@
+/* Кнопки */
+.btn{
+  position:relative;font:inherit;font-weight:600;font-size:14px;cursor:pointer;
+  padding:13px 26px;border-radius:var(--radius-sm);border:1px solid transparent;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  transition:transform var(--t-fast),box-shadow var(--t-fast),background var(--t-fast),border-color var(--t-fast),color var(--t-fast);
+  will-change:transform;
+  backface-visibility:hidden;
+}
+.btn:active{transform:scale(.965)}
+
+/* Варианты */
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 8px 24px -8px var(--accent-glow)}
+.btn-primary:hover{background:var(--accent-2);transform:translateY(-1.5px);box-shadow:0 14px 34px -8px var(--accent-glow)}
+.btn-ghost{background:transparent;border-color:var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.btn-soft{background:var(--accent-soft);color:var(--accent)}
+.btn-soft:hover{background:rgba(var(--accent-rgb),.22)}
+.btn-dark{background:var(--surface-3);border-color:var(--border);color:var(--text)}
+.btn-dark:hover{border-color:var(--border-hover);background:#2b2b2b}
+.btn-danger{background:rgba(248,113,113,.12);color:var(--error);border-color:rgba(248,113,113,.25)}
+.btn-danger:hover{background:rgba(248,113,113,.22)}
+
+/* Иконочные */
+.btn-icon{width:46px;height:46px;padding:0}
+.btn-icon-sq{border-radius:13px}
+.btn-icon-circle{border-radius:50%}
+.btn-icon-circle:hover{transform:translateY(-1.5px) rotate(90deg)}
+.btn-icon-circle:hover svg{transform:rotate(-90deg)}
+.btn-icon-circle svg{transition:transform var(--t-med)}
+
+/* Размеры */
+.btn-sm{padding:9px 18px;font-size:13px}
+.btn-lg{padding:16px 34px;font-size:15px}
+
+/* Состояния */
+.btn .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite}
+.btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn-arrow svg{transition:transform var(--t-fast)}
+.btn-arrow:hover svg{transform:translateX(4px)}

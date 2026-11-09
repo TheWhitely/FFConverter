@@ -1,0 +1,9 @@
+/* Аккордеон (initAccordions) */
+.acc{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);overflow:hidden}
+.acc-item+.acc-item{border-top:1px solid var(--border)}
+.acc-head{width:100%;display:flex;justify-content:space-between;align-items:center;padding:18px 22px;font:inherit;font-size:14.5px;font-weight:600;color:var(--text);background:transparent;border:0;cursor:pointer;text-align:left;transition:color var(--t-fast)}
+.acc-head:hover{color:var(--accent)}
+.acc-head .chev{transition:transform var(--t-med);color:var(--text-dim);flex-shrink:0}
+.acc-item.open .chev{transform:rotate(180deg);color:var(--accent)}
+.acc-body{max-height:0;overflow:hidden;transition:max-height .4s var(--ease)}
+.acc-body p{padding:0 22px 20px;font-size:13.5px;color:var(--text-muted);line-height:1.65}

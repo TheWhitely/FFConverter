@@ -1,0 +1,19 @@
+/* Слайдер (range). Заливку до бегунка синхронизирует initRanges() через --val */
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:6px;border-radius:99px;
+  background:linear-gradient(90deg,var(--accent) var(--val,50%),#2c2c2c var(--val,50%));
+  outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+  background:#fff;border:5px solid var(--accent);
+  box-shadow:0 0 14px var(--accent-glow);transition:transform var(--t-fast);
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+input[type=range]::-moz-range-thumb{
+  width:20px;height:20px;border-radius:50%;
+  background:#fff;border:5px solid var(--accent);
+  box-shadow:0 0 14px var(--accent-glow);transition:transform var(--t-fast);
+}
+input[type=range]::-moz-range-thumb:hover{transform:scale(1.15)}

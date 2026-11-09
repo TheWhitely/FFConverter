@@ -1,0 +1,12 @@
+/* Табы */
+.tabs{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px;flex-wrap:wrap}
+.tab{font:inherit;font-size:13.5px;font-weight:600;color:var(--text-muted);background:transparent;border:0;cursor:pointer;padding:9px 20px;border-radius:9px;transition:all var(--t-fast)}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--accent-soft);color:var(--accent)}
+
+/* Табы с подчёркиванием */
+.tabs-underline{display:flex;gap:26px;border-bottom:1px solid var(--border)}
+.tabs-underline .tab{border-radius:0;padding:10px 2px;position:relative;background:transparent}
+.tabs-underline .tab.active{color:var(--accent)}
+.tabs-underline .tab.active::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);border-radius:2px;animation:tabIn .22s var(--ease);transform-origin:center;will-change:transform;backface-visibility:hidden}
+@keyframes tabIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}

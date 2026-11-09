@@ -1,0 +1,42 @@
+/* Поля ввода */
+.field{display:flex;flex-direction:column;gap:8px;flex:1;min-width:200px}
+.field>span{font-size:13px;font-weight:500;color:var(--text-muted)}
+.input,textarea.input,select.input{
+  font:inherit;font-size:14px;color:var(--text);background:var(--surface-2);
+  border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 16px;outline:none;
+  transition:border-color var(--t-fast),box-shadow var(--t-med),background var(--t-fast);
+  appearance:none;width:100%;
+}
+.input::placeholder{color:#5f5f5f}
+.input:hover{border-color:var(--border-hover)}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);background:#222}
+.input.err{border-color:var(--error)}
+.input.err:focus{box-shadow:0 0 0 4px rgba(248,113,113,.12)}
+.hint{font-size:12px;color:var(--text-dim)}
+.hint.err{color:var(--error)}
+
+/* Поле с иконкой */
+.input-wrap{position:relative}
+.input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#666;transition:color var(--t-fast);pointer-events:none}
+.input-wrap .input{padding-left:42px}
+.input-wrap:focus-within svg{color:var(--accent)}
+
+/* Textarea */
+textarea.input{
+  resize:vertical;min-height:96px;
+  scrollbar-color:#3a3a3a #181818;
+  scrollbar-width:thin;
+}
+textarea.input::-webkit-resizer{
+  background:linear-gradient(135deg,transparent 0 46%,#555 47% 52%,transparent 53% 62%,#555 63% 68%,transparent 69%);
+}
+textarea.input::-webkit-scrollbar{width:10px}
+textarea.input::-webkit-scrollbar-track{background:#181818;border-radius:0 9px 9px 0}
+textarea.input::-webkit-scrollbar-thumb{background:#3a3a3a;border:2px solid #181818;border-radius:99px}
+textarea.input::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+
+/* Нативный select */
+.select-wrap{position:relative}
+.select-wrap::after{content:'';position:absolute;right:16px;top:50%;width:8px;height:8px;border-right:2px solid #888;border-bottom:2px solid #888;transform:translateY(-70%) rotate(45deg);pointer-events:none;transition:border-color var(--t-fast)}
+.select-wrap:focus-within::after{border-color:var(--accent)}
+select.input option{background:var(--surface-2)}

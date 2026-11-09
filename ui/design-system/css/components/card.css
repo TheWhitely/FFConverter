@@ -1,0 +1,18 @@
+/* Карточки */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:28px;display:flex;flex-direction:column;gap:20px}
+
+/* Интерактивная карточка со свечением под курсором (initHoverCards) */
+.hover-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:26px;position:relative;overflow:hidden;transition:transform var(--t-med),border-color var(--t-med),box-shadow var(--t-med);will-change:transform}
+.hover-card::before{content:'';position:absolute;inset:0;border-radius:inherit;background:radial-gradient(480px circle at var(--mx,50%) var(--my,50%),rgba(var(--accent-rgb),.09),transparent 45%);opacity:0;transition:opacity var(--t-med)}
+.hover-card:hover{transform:translateY(-4px);border-color:#363636;box-shadow:0 24px 50px -22px rgba(0,0,0,.36)}
+.hover-card:hover::before{opacity:1}
+.hover-card h3{font-size:16px;font-weight:700;margin-bottom:6px;position:relative}
+.hover-card p{font-size:13.5px;color:var(--text-muted);line-height:1.6;position:relative}
+.card-tag{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;position:relative}
+
+/* Карточка-метрика */
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:22px}
+.stat-num{font-family:var(--font-display);font-size:26px;margin:8px 0 4px}
+.stat-delta{font-size:12.5px;font-weight:600}
+.up{color:var(--success)}
+.down{color:var(--error)}

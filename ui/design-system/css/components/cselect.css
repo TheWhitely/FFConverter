@@ -1,0 +1,51 @@
+/* Комбобокс (initSelects): .cselect / .cselect[data-multi] */
+.cselect{position:relative;min-width:220px;flex:1}
+.cselect-btn{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  font:inherit;font-size:14px;color:var(--text);text-align:left;cursor:pointer;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:13px 16px;transition:border-color var(--t-fast),box-shadow var(--t-med);
+}
+.cselect-btn:hover{border-color:var(--border-hover)}
+.cselect.open .cselect-btn{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.cselect-btn .cs-chev{transition:transform var(--t-med);color:#888;flex-shrink:0}
+.cselect.open .cs-chev{transform:rotate(180deg);color:var(--accent)}
+.cselect-btn .cs-ph{color:#5f5f5f}
+
+.cselect-menu{
+  position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:45;
+  background:#1f1f1f;border:1px solid var(--border);border-radius:14px;padding:6px;
+  box-shadow:0 18px 44px rgba(0,0,0,.30);max-height:240px;overflow-y:auto;
+  opacity:0;transform:translateY(-6px) scale(.97);pointer-events:none;transition:all var(--t-fast);
+  will-change:opacity,transform;
+}
+.cselect.open .cselect-menu{opacity:1;transform:none;pointer-events:auto}
+
+.cs-opt{
+  display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:500;color:var(--text-muted);
+  padding:10px 12px;border-radius:9px;cursor:pointer;transition:all var(--t-fast);user-select:none;
+}
+.cs-opt:hover{background:var(--accent-soft);color:var(--accent)}
+.cs-opt.sel{color:var(--accent)}
+.cs-opt .cs-check{width:15px;height:15px;margin-left:auto;opacity:0;transition:opacity var(--t-fast);flex-shrink:0}
+.cs-opt.sel .cs-check{opacity:1}
+
+/* Мультивыбор: маленький .box внутри опции */
+.cs-opt .box{width:18px;height:18px;border-radius:5px}
+.cs-opt .box::after{width:4px;height:7px;border-width:0 2px 2px 0}
+.cs-opt .box.on{box-shadow:none}
+
+/* Теги выбранного */
+.cs-tags{display:flex;flex-wrap:wrap;gap:6px}
+.cs-tag{
+  display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+  background:var(--accent-soft);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.25);
+  border-radius:8px;padding:4px 8px;animation:tagIn .2s var(--ease);
+  will-change:transform,opacity;backface-visibility:hidden;
+}
+@keyframes tagIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+.cs-tag button{
+  all:unset;cursor:pointer;font-size:13px;line-height:1;color:inherit;opacity:.7;
+  transition:opacity var(--t-fast),transform var(--t-fast);
+}
+.cs-tag button:hover{opacity:1;transform:scale(1.2)}

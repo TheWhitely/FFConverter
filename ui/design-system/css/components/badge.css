@@ -1,0 +1,22 @@
+/* Бейджи */
+.badge{font-size:12px;font-weight:600;padding:5px 12px;border-radius:99px;display:inline-flex;align-items:center;gap:6px}
+.badge-accent{background:var(--accent-soft);color:var(--accent);border:1px solid rgba(var(--accent-rgb),.3)}
+.badge-neutral{background:#262626;color:var(--text-muted);border:1px solid var(--border)}
+.badge-success{background:rgba(74,222,128,.1);color:var(--success);border:1px solid rgba(74,222,128,.25)}
+.badge-warning{background:rgba(251,191,36,.1);color:var(--warning);border:1px solid rgba(251,191,36,.25)}
+.badge-error{background:rgba(248,113,113,.1);color:var(--error);border:1px solid rgba(248,113,113,.25)}
+
+/* Пульсирующая точка «live».
+   Пульс — расходящееся кольцо на transform/opacity (композитинг),
+   а не анимация box-shadow: та перерисовывала область каждый кадр. */
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);position:relative;flex-shrink:0}
+.dot::after{
+  content:'';position:absolute;inset:-2px;border-radius:50%;
+  border:2px solid var(--accent);
+  animation:pulse 2s var(--ease) infinite;
+  will-change:transform,opacity;
+}
+@keyframes pulse{
+  0%{transform:scale(.5);opacity:.8}
+  70%,100%{transform:scale(1.9);opacity:0}
+}

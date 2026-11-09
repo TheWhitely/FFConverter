@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#141414">
+  <title>FFConverter</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <style>:root{color-scheme:dark}html,body{background:#141414;color:#f5f5f5}</style>
+  <link rel="stylesheet" href="design-system/fonts/fonts.css">
+  <link rel="stylesheet" href="design-system/css/whitely.css">
+  <link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+  <svg class="svg-defs" aria-hidden="true">
+    <defs>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 6 9 6-9 6V6Z"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4M7 12h10"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3 7.8 7.5 9.5 4.5-1.7 7.5-5 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/></symbol>
+      <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+      <symbol id="i-zap" viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></symbol>
+      <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="m8.5 8.5 11 7.5M8.5 15.5 19.5 8"/></symbol>
+      <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v16a2 2 0 0 0 2 2h14M2 6h16a2 2 0 0 1 2 2v14"/></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m4 17 5-5 4 4 2-2 5 4"/></symbol>
+      <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12M9 9l11-2"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></symbol>
+      <symbol id="i-volume" viewBox="0 0 24 24"><path d="M5 10v4h3l4 4V6l-4 4H5ZM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></symbol>
+      <symbol id="i-muted" viewBox="0 0 24 24"><path d="M5 10v4h3l4 4V6l-4 4H5ZM16 10l5 5M21 10l-5 5"/></symbol>
+      <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="m11 7-5 5 5 5M18 7l-5 5 5 5"/></symbol>
+      <symbol id="i-forward" viewBox="0 0 24 24"><path d="m6 7 5 5-5 5M13 7l5 5-5 5"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7a7 7 0 0 0-.7-1.6l.9-1.9-2.1-2.1-1.9.9a7 7 0 0 0-1.7-.7L10.5 2h-3l-.7 2a7 7 0 0 0-1.6.7l-1.9-.9-2.1 2.1.9 1.9a7 7 0 0 0-.7 1.7L-1 10.5v3l2 .7a7 7 0 0 0 .7 1.7l-.9 1.9 2.1 2.1 1.9-.9a7 7 0 0 0 1.6.7l.7 2h3l.7-2a7 7 0 0 0 1.7-.7l1.9.9 2.1-2.1-.9-1.9a7 7 0 0 0 .7-1.6l1.8-.7Z" transform="translate(4 0) scale(.8)"/></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1.2-1.5 2.5M12 17h.01"/></symbol>
+      <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 4v6h6M5.5 15a7 7 0 1 0 .5-7l-2 2"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    </defs>
+  </svg>
+
+  <input id="file-input" type="file" accept="video/*,.mkv,.mov,.avi,.webm" hidden>
+
+  <section class="welcome-screen" id="welcome-screen" aria-label="Открытие видео">
+    <header class="app-header welcome-header" data-tauri-drag-region>
+      <a class="brand" href="#" aria-label="FFConverter — главный экран">
+        <span class="brand-mark"><span></span><span></span></span>
+        <span class="brand-name">FFCONVERTER</span>
+      </a>
+      <div class="titlebar-actions">
+        <span class="portable-badge"><span class="status-dot"></span>PORTABLE</span>
+        <div class="window-controls">
+          <button data-window-action="minimize" type="button" aria-label="Свернуть"><svg class="icon"><use href="#i-minus"></use></svg></button>
+          <button data-window-action="maximize" type="button" aria-label="Развернуть"><svg class="icon"><use href="#i-expand"></use></svg></button>
+          <button class="window-close" data-window-action="close" type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-close"></use></svg></button>
+        </div>
+      </div>
+    </header>
+
+    <main class="welcome-main">
+      <div class="drop-zone" id="drop-zone" aria-label="Область для перетаскивания видео">
+        <div class="drop-corner corner-tl"></div><div class="drop-corner corner-tr"></div>
+        <div class="drop-corner corner-bl"></div><div class="drop-corner corner-br"></div>
+        <div class="upload-icon"><svg class="icon"><use href="#i-upload"></use></svg></div>
+        <h2>Перетащите видео сюда</h2>
+        <p>или выберите файл на компьютере</p>
+        <div class="drop-actions">
+          <button class="btn btn-primary" id="browse-button" type="button"><svg class="icon"><use href="#i-folder"></use></svg>Выбрать видео</button>
+          <button class="btn btn-ghost" id="demo-button" type="button">Открыть демо<svg class="icon"><use href="#i-arrow"></use></svg></button>
+        </div>
+        <div class="format-list"><span>MP4</span><i></i><span>MKV</span><i></i><span>MOV</span><i></i><span>AVI</span><i></i><span>WEBM</span></div>
+      </div>
+    </main>
+    <footer class="welcome-footer"><span>Локальный видеоконвертер</span><span>Версия 1.0</span></footer>
+  </section>
+
+  <section class="workspace" id="workspace" aria-label="Рабочая область" hidden>
+    <header class="app-header workspace-header" data-tauri-drag-region>
+      <div class="header-left">
+        <button class="brand brand-button" id="home-button" type="button" aria-label="Вернуться на главный экран">
+          <span class="brand-mark"><span></span><span></span></span>
+          <span class="brand-name">FFCONVERTER</span>
+        </button>
+        <span class="header-divider"></span>
+        <div class="file-identity"><svg class="icon"><use href="#i-film"></use></svg><div><strong id="header-file-name">Showreel_2026.mp4</strong><span id="header-file-meta">MP4 · 48,2 МБ</span></div></div>
+      </div>
+      <div class="header-actions">
+        <span class="saved-status"><span class="status-dot"></span><span id="workspace-mode">Демо-режим</span></span>
+        <button class="btn btn-dark btn-sm" id="change-file-button" type="button"><svg class="icon"><use href="#i-folder"></use></svg>Сменить файл</button>
+        <button class="icon-button" id="help-button" type="button" aria-label="Справка"><svg class="icon"><use href="#i-help"></use></svg></button>
+        <div class="window-controls">
+          <button data-window-action="minimize" type="button" aria-label="Свернуть"><svg class="icon"><use href="#i-minus"></use></svg></button>
+          <button data-window-action="maximize" type="button" aria-label="Развернуть"><svg class="icon"><use href="#i-expand"></use></svg></button>
+          <button class="window-close" data-window-action="close" type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-close"></use></svg></button>
+        </div>
+      </div>
+    </header>
+
+    <main class="workbench">
+      <div class="media-column">
+        <section class="preview-card" aria-label="Предпросмотр видео">
+          <div class="preview-stage" id="preview-stage">
+            <div class="demo-poster" id="demo-poster">
+              <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice" aria-label="Демонстрационный кадр">
+                <defs>
+                  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#191624"/><stop offset=".55" stop-color="#3b233d"/><stop offset="1" stop-color="#f16c82"/></linearGradient>
+                  <linearGradient id="mountain" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#292233"/><stop offset="1" stop-color="#0e1016"/></linearGradient>
+                  <radialGradient id="sun"><stop stop-color="#ffd4c2"/><stop offset=".55" stop-color="#ff9c9c"/><stop offset="1" stop-color="#fa5782" stop-opacity="0"/></radialGradient>
+                </defs>
+                <rect width="1280" height="720" fill="url(#sky)"/>
+                <circle cx="900" cy="260" r="230" fill="url(#sun)"/><circle cx="900" cy="260" r="104" fill="#ffb2ac" opacity=".92"/>
+                <path d="M0 480 200 310l140 120 190-210 220 260 130-120 200 140 200-100v320H0Z" fill="#292331" opacity=".65"/>
+                <path d="M0 560 260 370l150 160 200-90 210 140 210-190 250 170v160H0Z" fill="url(#mountain)"/>
+                <path d="m260 370 52 56 35-18 63 122-150-160ZM1030 390l-74 67-40-12-86 135 200-190Z" fill="#746070" opacity=".38"/>
+                <path d="M0 610c230-50 390 40 630-10s390-30 650 30v90H0Z" fill="#0b0d12"/>
+                <g fill="#fff" opacity=".75" font-family="Inter, sans-serif"><text x="54" y="68" font-size="15" letter-spacing="5">FFCONVERTER</text><text x="54" y="652" font-size="13" letter-spacing="3">ДЕМОНСТРАЦИОННЫЙ КАДР</text></g>
+              </svg>
+            </div>
+            <video id="video-preview" playsinline hidden></video>
+            <div class="preview-topbar">
+              <div class="preview-badges"><span class="preview-badge"><span class="status-dot"></span>ПРЕДПРОСМОТР</span><span class="preview-badge muted" id="preview-resolution">1920 × 1080</span></div>
+              <span class="preview-badge muted" id="preview-codec">H.264 · 30 FPS</span>
+            </div>
+            <button class="center-play" id="center-play" type="button" aria-label="Воспроизвести"><svg class="icon"><use href="#i-play"></use></svg></button>
+            <div class="crop-overlay" id="crop-overlay" hidden><div class="crop-frame"><span class="crop-handle ch-tl"></span><span class="crop-handle ch-tr"></span><span class="crop-handle ch-bl"></span><span class="crop-handle ch-br"></span><div class="crop-grid"></div></div><span class="crop-label">Область кадра · 16:9</span></div>
+          </div>
+          <div class="playback-bar">
+            <div class="playback-main">
+              <button class="player-button primary-play" id="play-button" type="button" aria-label="Воспроизвести"><svg class="icon"><use href="#i-play"></use></svg></button>
+              <button class="player-button" id="rewind-button" type="button" aria-label="Назад на 5 секунд"><svg class="icon"><use href="#i-back"></use></svg></button>
+              <button class="player-button" id="forward-button" type="button" aria-label="Вперёд на 5 секунд"><svg class="icon"><use href="#i-forward"></use></svg></button>
+              <span class="playback-time"><strong id="playback-current">00:00</strong><span>/</span><span id="playback-duration">00:41</span></span>
+            </div>
+            <div class="playback-secondary">
+              <span class="preview-file-label" id="preview-file-label">Showreel_2026.mp4</span>
+              <button class="player-button" id="mute-button" type="button" aria-label="Выключить звук"><svg class="icon"><use href="#i-volume"></use></svg></button>
+              <button class="player-button" id="fullscreen-button" type="button" aria-label="На весь экран"><svg class="icon"><use href="#i-expand"></use></svg></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="timeline-card" aria-label="Таймлайн и обрезка">
+          <div class="timeline-header">
+            <div class="section-title"><svg class="icon"><use href="#i-scissors"></use></svg><h2>Обрезка</h2><span class="soft-badge" id="trim-length">41,0 сек</span></div>
+            <div class="timeline-actions">
+              <div class="segmented compact" id="trim-mode"><button class="active" data-mode="precise" type="button">Точно</button><button data-mode="fast" type="button">Без потерь</button></div>
+              <button class="icon-button small" id="reset-trim" type="button" aria-label="Сбросить обрезку"><svg class="icon"><use href="#i-reset"></use></svg></button>
+            </div>
+          </div>
+          <div class="timeline-body">
+            <div class="timeline-ruler"><span>00:00</span><span>00:10</span><span>00:20</span><span>00:30</span><span id="ruler-end">00:41</span></div>
+            <div class="timeline-track" id="timeline-track">
+              <div class="timeline-thumbnails" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <div class="timeline-dim dim-left"></div><div class="timeline-dim dim-right"></div>
+              <div class="timeline-selection"></div>
+              <div class="trim-handle trim-start" data-drag="start" role="slider" tabindex="0" aria-label="Начало фрагмента" aria-valuemin="0" aria-valuemax="41" aria-valuenow="0"><span></span></div>
+              <div class="trim-handle trim-end" data-drag="end" role="slider" tabindex="0" aria-label="Конец фрагмента" aria-valuemin="0" aria-valuemax="41" aria-valuenow="41"><span></span></div>
+              <div class="playhead" data-drag="playhead" role="slider" tabindex="0" aria-label="Текущая позиция" aria-valuemin="0" aria-valuemax="41" aria-valuenow="0"><span></span></div>
+            </div>
+            <div class="timeline-footer"><span id="trim-start-time">Начало&nbsp; 00:00.000</span><span class="timeline-hint">Перетащите маркеры, чтобы выбрать фрагмент</span><span id="trim-end-time">Конец&nbsp; 00:41.000</span></div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="inspector" aria-label="Настройки экспорта">
+        <div class="inspector-header">
+          <div><span class="inspector-kicker">OUTPUT</span><h2>Настройки</h2></div>
+          <button class="icon-button small" id="reset-settings" type="button" aria-label="Сбросить настройки"><svg class="icon"><use href="#i-reset"></use></svg></button>
+        </div>
+        <div class="inspector-tabs" role="tablist" aria-label="Тип настроек">
+          <button class="active" id="video-tab" data-panel="video-panel" role="tab" aria-selected="true" type="button"><svg class="icon"><use href="#i-film"></use></svg>Видео</button>
+          <button id="audio-tab" data-panel="audio-panel" role="tab" aria-selected="false" type="button"><svg class="icon"><use href="#i-music"></use></svg>Звук<span class="tab-count">2</span></button>
+        </div>
+
+        <div class="inspector-scroll">
+          <div class="settings-panel" id="video-panel" role="tabpanel" aria-labelledby="video-tab">
+            <details class="setting-section" open>
+              <summary><span class="setting-icon"><svg class="icon"><use href="#i-zap"></use></svg></span><span><strong>Сжатие</strong><small id="compression-summary">Оптимальный · HEVC</small></span><svg class="icon chevron"><use href="#i-chevron"></use></svg></summary>
+              <div class="setting-content">
+                <div class="preset-grid" id="preset-grid">
+                  <button data-preset="universal" type="button"><span>Универсальный</span><small>H.264 · CPU</small></button>
+                  <button class="active" data-preset="optimal" type="button"><span>Оптимальный</span><small>HEVC · CPU</small><i><svg class="icon"><use href="#i-check"></use></svg></i></button>
+                  <button data-preset="maximum" type="button"><span>Компактный</span><small>AV1 · CPU</small></button>
+                  <button data-preset="nvidia" type="button"><span>Быстрый</span><small>HEVC · NVIDIA</small></button>
+                </div>
+                <div class="control-block quality-control">
+                  <div class="control-label"><label for="quality-range">Качество</label><span class="value-badge" id="quality-value">CRF 23 · Высокое</span></div>
+                  <input id="quality-range" type="range" min="15" max="35" value="23" style="--val:40%">
+                  <div class="range-caption"><span>Выше качество</span><span>Меньше файл</span></div>
+                </div>
+                <div class="field-row">
+                  <label class="select-field"><span>Кодек</span><span class="select-wrap"><select id="codec-select"><option value="H.264">H.264</option><option value="HEVC" selected>HEVC / H.265</option><option value="AV1">AV1</option></select><svg class="icon"><use href="#i-chevron"></use></svg></span></label>
+                  <label class="select-field"><span>Устройство</span><span class="select-wrap"><select id="encoder-select"><option>CPU</option><option>NVIDIA NVENC</option><option>Intel Quick Sync</option></select><svg class="icon"><use href="#i-chevron"></use></svg></span></label>
+                </div>
+                <div class="inline-note"><svg class="icon"><use href="#i-cpu"></use></svg><span id="encoder-note">Максимальная совместимость настроек с вашим устройством будет проверена при экспорте.</span></div>
+              </div>
+            </details>
+
+            <details class="setting-section">
+              <summary><span class="setting-icon"><svg class="icon"><use href="#i-film"></use></svg></span><span><strong>Конвертирование</strong><small>Контейнер и формат</small></span><svg class="icon chevron"><use href="#i-chevron"></use></svg></summary>
+              <div class="setting-content">
+                <label class="select-field"><span>Контейнер</span><span class="select-wrap"><select id="container-select"><option value="original">Оригинал</option><option>MP4</option><option>MKV</option><option>MOV</option><option>WebM</option></select><svg class="icon"><use href="#i-chevron"></use></svg></span></label>
+                <label class="switch-row"><span><strong>Сохранить метаданные</strong><small>Дата, название и другие свойства</small></span><span class="switch"><input type="checkbox" checked><span class="slider"></span></span></label>
+                <label class="switch-row"><span><strong>Сохранить субтитры</strong><small>Если они есть в исходном файле</small></span><span class="switch"><input type="checkbox" checked><span class="slider"></span></span></label>
+              </div>
+            </details>
+
+            <details class="setting-section">
+              <summary><span class="setting-icon"><svg class="icon"><use href="#i-expand"></use></svg></span><span><strong>Разрешение</strong><small id="resolution-summary">Как в оригинале · 1920 × 1080</small></span><svg class="icon chevron"><use href="#i-chevron"></use></svg></summary>
+              <div class="setting-content">
+                <div class="resolution-presets" id="resolution-presets"><button class="active" data-width="1920" data-height="1080" type="button">Оригинал</button><button data-width="3840" data-height="2160" type="button">4K</button><button data-width="2560" data-height="1440" type="button">2K</button><button data-width="1280" data-height="720" type="button">720p</button></div>
+                <div class="dimension-row"><label><span>Ширина</span><input class="input" id="width-input" type="number" value="1920" min="16"></label><span>×</span><label><span>Высота</span><input class="input" id="height-input" type="number" value="1080" min="16"></label></div>
+                <label class="switch-row"><span><strong>Сохранять пропорции</strong><small>Не растягивать изображение</small></span><span class="switch"><input id="aspect-lock" type="checkbox" checked><span class="slider"></span></span></label>
+              </div>
+            </details>
+
+            <details class="setting-section">
+              <summary><span class="setting-icon"><svg class="icon"><use href="#i-crop"></use></svg></span><span><strong>Обрезка кадра</strong><small id="crop-summary">Весь кадр</small></span><svg class="icon chevron"><use href="#i-chevron"></use></svg></summary>
+              <div class="setting-content">
+                <div class="ratio-grid" id="ratio-grid"><button class="active" data-ratio="free" type="button">Весь кадр</button><button data-ratio="16:9" type="button">16:9</button><button data-ratio="1:1" type="button">1:1</button><button data-ratio="4:3" type="button">4:3</button><button data-ratio="9:16" type="button">9:16</button></div>
+                <button class="btn btn-dark full-width" id="crop-preview-button" type="button"><svg class="icon"><use href="#i-crop"></use></svg>Показать область на превью</button>
+              </div>
+            </details>
+
+            <details class="setting-section">
+              <summary><span class="setting-icon"><svg class="icon"><use href="#i-image"></use></svg></span><span><strong>Раскадровка и GIF</strong><small>PNG, JPG или анимация</small></span><svg class="icon chevron"><use href="#i-chevron"></use></svg></summary>
+              <div class="setting-content">
+                <div class="segmented full" id="image-format"><button class="active" data-format="PNG" type="button">PNG</button><button data-format="JPG" type="button">JPG</button><button data-format="GIF" type="button">GIF</button></div>
+                <label class="switch-row"><span><strong>Только текущий кадр</strong><small id="frame-time-label">Позиция 00:00.000</small></span><span class="switch"><input id="single-frame" type="checkbox" checked><span class="slider"></span></span></label>
+                <div class="control-block"><div class="control-label"><label for="fps-range">Частота кадров</label><span class="value-badge" id="fps-value">12 FPS</span></div><input id="fps-range" type="range" min="5" max="30" value="12" style="--val:28%"></div>
+              </div>
+            </details>
+          </div>
+
+          <div class="settings-panel" id="audio-panel" role="tabpanel" aria-labelledby="audio-tab" hidden>
+            <div class="audio-overview"><span class="setting-icon"><svg class="icon"><use href="#i-music"></use></svg></span><div><strong>Аудиодорожки</strong><span>Настройте каждую дорожку отдельно</span></div><span class="soft-badge">2 дорожки</span></div>
+            <article class="audio-track" data-track="1">
+              <div class="audio-track-head"><span class="track-number">01</span><div><strong>Основная дорожка</strong><span>Русский · AAC · Stereo</span></div><label class="switch"><input class="track-enabled" type="checkbox" checked aria-label="Включить основную дорожку"><span class="slider"></span></label></div>
+              <div class="track-volume"><svg class="icon"><use href="#i-volume"></use></svg><input class="audio-volume" type="range" min="0" max="200" value="100" aria-label="Громкость основной дорожки" style="--val:50%"><span>100%</span></div>
+              <div class="track-footer"><span>48 kHz · 192 kb/s</span><button class="text-button track-mute" type="button">Выключить звук</button></div>
+            </article>
+            <article class="audio-track" data-track="2">
+              <div class="audio-track-head"><span class="track-number">02</span><div><strong>Комментарии</strong><span>English · AAC · Stereo</span></div><label class="switch"><input class="track-enabled" type="checkbox" checked aria-label="Включить дорожку комментариев"><span class="slider"></span></label></div>
+              <div class="track-volume"><svg class="icon"><use href="#i-volume"></use></svg><input class="audio-volume" type="range" min="0" max="200" value="85" aria-label="Громкость дорожки комментариев" style="--val:42.5%"><span>85%</span></div>
+              <div class="track-footer"><span>48 kHz · 160 kb/s</span><button class="text-button track-mute" type="button">Выключить звук</button></div>
+            </article>
+            <details class="setting-section audio-output">
+              <summary><span class="setting-icon"><svg class="icon"><use href="#i-settings"></use></svg></span><span><strong>Формат звука</strong><small>AAC · 192 kb/s</small></span><svg class="icon chevron"><use href="#i-chevron"></use></svg></summary>
+              <div class="setting-content"><div class="field-row"><label class="select-field"><span>Кодек</span><span class="select-wrap"><select><option>AAC</option><option>MP3</option><option>FLAC</option><option>Оригинал</option></select><svg class="icon"><use href="#i-chevron"></use></svg></span></label><label class="select-field"><span>Битрейт</span><span class="select-wrap"><select><option>128 kb/s</option><option selected>192 kb/s</option><option>256 kb/s</option><option>320 kb/s</option></select><svg class="icon"><use href="#i-chevron"></use></svg></span></label></div></div>
+            </details>
+            <div class="inline-note"><svg class="icon"><use href="#i-help"></use></svg><span>Если отключить все дорожки, видео будет сохранено без звука.</span></div>
+          </div>
+        </div>
+
+        <div class="export-panel">
+          <div class="output-name"><svg class="icon"><use href="#i-film"></use></svg><div><strong id="output-file-name">Showreel_2026_compressed.mp4</strong><span id="export-summary">MP4 · HEVC · 1920 × 1080</span></div><span class="output-format" id="output-format">MP4</span></div>
+          <button class="btn btn-primary export-button" id="export-button" type="button"><span>Экспортировать</span><svg class="icon"><use href="#i-arrow"></use></svg></button>
+          <div class="export-footnote"><svg class="icon"><use href="#i-shield"></use></svg><span>Файл будет сохранён на вашем компьютере</span></div>
+        </div>
+      </aside>
+      <div class="workbench-loading" id="workbench-loading" role="status" aria-live="polite" hidden>
+        <div class="workbench-loading-content">
+          <span class="ring-loader" aria-hidden="true"></span>
+          <h2 id="loading-title">Подготовка видео</h2>
+          <p id="loading-status">Открытие файла…</p>
+          <div class="loading-actions" id="loading-actions" hidden>
+            <button class="btn btn-primary" id="loading-change-file" type="button">Выбрать другой файл</button>
+            <button class="btn btn-dark" id="loading-home" type="button">На главный экран</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <div class="app-modal" id="export-modal" role="dialog" aria-modal="true" aria-labelledby="export-modal-title" hidden>
+    <div class="modal-card">
+      <button class="icon-button modal-close" data-close-modal type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-close"></use></svg></button>
+      <span class="modal-icon"><svg class="icon"><use href="#i-check"></use></svg></span>
+      <span class="eyebrow modal-eyebrow">Макет интерфейса</span>
+      <h2 id="export-modal-title">Настройки экспорта готовы</h2>
+      <p>Сейчас вы просматриваете UI-прототип. FFmpeg и сохранение файла будут подключены на следующем этапе.</p>
+      <div class="export-review"><div><span>Файл</span><strong id="review-file">Showreel_2026_compressed.mp4</strong></div><div><span>Формат</span><strong id="review-format">MP4 · HEVC</strong></div><div><span>Фрагмент</span><strong id="review-trim">00:00 — 00:41</strong></div></div>
+      <button class="btn btn-primary full-width" data-close-modal type="button">Вернуться к настройкам</button>
+    </div>
+  </div>
+
+  <div class="app-modal" id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-modal-title" hidden>
+    <div class="modal-card help-card">
+      <button class="icon-button modal-close" data-close-modal type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-close"></use></svg></button>
+      <span class="eyebrow modal-eyebrow">Настройки</span><h2 id="help-modal-title">FFConverter</h2>
+      <label class="accent-setting" for="accent-color"><span><strong>Акцентный цвет</strong><small>Основной цвет интерфейса</small></span><span class="accent-picker"><input id="accent-color" type="color" value="#fa5782"><span id="accent-value">#FA5782</span></span></label>
+      <section class="update-setting" aria-label="Обновления">
+        <div class="update-setting-row"><div><strong>Обновления</strong><span id="update-status">Версия 1.0.0</span></div><button class="btn btn-dark btn-sm" id="update-check" type="button">Проверить</button></div>
+        <div class="update-progress" id="update-progress" hidden><div class="update-progress-track"><span id="update-progress-bar"></span></div><span id="update-progress-value">0%</span></div>
+      </section>
+      <div class="shortcut-list"><div><span>Воспроизведение / пауза</span><kbd>Пробел</kbd></div><div><span>Перемотка на 5 секунд</span><span><kbd>←</kbd> <kbd>→</kbd></span></div><div><span>Сбросить обрезку</span><kbd>R</kbd></div><div><span>Закрыть окно</span><kbd>Esc</kbd></div></div>
+      <p class="modal-hint">В демо-режиме управляется виртуальная позиция. При открытии поддерживаемого браузером видео элементы управляют самим файлом.</p>
+      <button class="btn btn-dark full-width" data-close-modal type="button">Понятно</button>
+    </div>
+  </div>
+
+  <div class="app-modal" id="update-modal" role="dialog" aria-modal="true" aria-labelledby="update-modal-title" hidden>
+    <div class="modal-card">
+      <span class="modal-icon"><svg class="icon"><use href="#i-reset"></use></svg></span>
+      <span class="eyebrow modal-eyebrow">Обновление готово</span>
+      <h2 id="update-modal-title">Новая версия FFConverter</h2>
+      <p id="update-version-label"></p>
+      <p id="update-notes"></p>
+      <div class="modal-actions"><button class="btn btn-primary full-width" id="update-install" type="button">Обновить и перезапустить</button><button class="btn btn-dark full-width" data-close-modal type="button">Позже</button></div>
+    </div>
+  </div>
+
+  <script src="design-system/js/whitely.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

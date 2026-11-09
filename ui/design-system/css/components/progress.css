@@ -1,0 +1,31 @@
+/* Прогресс */
+.progress{height:8px;background:#262626;border-radius:99px;overflow:hidden;width:100%}
+.progress-bar{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 0 12px var(--accent-glow);transition:width 1.4s var(--ease)}
+.progress-striped .progress-bar{background:repeating-linear-gradient(45deg,var(--accent),var(--accent) 10px,var(--accent-2) 10px,var(--accent-2) 20px);background-size:28px 100%;animation:stripes 1s linear infinite;box-shadow:none}
+@keyframes stripes{to{background-position:28px 0}}
+
+/* Спиннеры */
+.spinner{width:34px;height:34px;border-radius:50%;border:3px solid #2c2c2c;border-top-color:var(--accent);animation:rot .8s linear infinite}
+.spinner-lg{width:52px;height:52px;border-width:4px}
+.dots-loader{display:flex;gap:6px}
+.dots-loader span{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:bounce 1.2s infinite}
+.dots-loader span:nth-child(2){animation-delay:.15s}
+.dots-loader span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-8px);opacity:1}}
+.ring-loader{width:44px;height:44px;position:relative}
+.ring-loader::before,.ring-loader::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid transparent}
+.ring-loader::before{border-top-color:var(--accent);animation:rot 1s linear infinite}
+.ring-loader::after{inset:7px;border-top-color:rgba(var(--accent-rgb),.45);animation:rot 1.4s linear infinite reverse}
+
+/* Скелетон.
+   Блик — полоса, едущая на transform (композитинг), а не анимация
+   background-position: та перерисовывала элемент каждый кадр. */
+.skeleton{border-radius:8px;background:#1e1e1e;position:relative;overflow:hidden}
+.skeleton::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,#282828 50%,transparent);
+  transform:translateX(-100%);
+  animation:shimmer 1.6s infinite;
+  will-change:transform;
+}
+@keyframes shimmer{to{transform:translateX(100%)}}

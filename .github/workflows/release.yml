@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version 2.12.4 --locked
+
+      - name: Download FFmpeg
+        shell: pwsh
+        run: |
+          $archive = "$env:RUNNER_TEMP\ffmpeg.zip"
+          $unpacked = "$env:RUNNER_TEMP\ffmpeg"
+          Invoke-WebRequest 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip' -OutFile $archive
+          Expand-Archive $archive $unpacked
+          $package = Get-ChildItem $unpacked -Directory | Select-Object -First 1
+          New-Item -ItemType Directory -Force runtime | Out-Null
+          Copy-Item "$($package.FullName)\bin\ffmpeg.exe" runtime\ffmpeg.exe
+          Copy-Item "$($package.FullName)\bin\ffprobe.exe" runtime\ffprobe.exe
+          $license = Get-ChildItem $package.FullName -Recurse -Filter 'LICENSE.txt' | Select-Object -First 1
+          if ($license) { Copy-Item $license.FullName runtime\FFmpeg-LICENSE.txt }
+
+      - name: Build FFConverter
+        run: cargo tauri build --no-bundle
+
+      - name: Build updater
+        run: cargo build --release --manifest-path src-tauri/Cargo.toml --bin updater
+
+      - name: Create portable package
+        shell: pwsh
+        run: |
+          $root = 'dist\FFConverter'
+          New-Item -ItemType Directory -Force "$root\runtime" | Out-Null
+          Copy-Item src-tauri\target\release\ffconverter.exe "$root\FFConverter.exe"
+          Copy-Item src-tauri\target\release\updater.exe "$root\updater.exe"
+          Copy-Item runtime\ffmpeg.exe "$root\runtime\ffmpeg.exe"
+          Copy-Item runtime\ffprobe.exe "$root\runtime\ffprobe.exe"
+          Copy-Item runtime\FFmpeg-LICENSE.txt "$root\runtime\FFmpeg-LICENSE.txt"
+          Compress-Archive -Path $root -DestinationPath dist\FFConverter-portable.zip -CompressionLevel Optimal
+
+      - name: Create update manifest
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path src-tauri\Cargo.toml -Pattern '^version = "([^"]+)"').Matches.Groups[1].Value
+          $tag = $env:GITHUB_REF_NAME
+          $hash = (Get-FileHash dist\FFConverter-portable.zip -Algorithm SHA256).Hash.ToLower()
+          $manifest = @{
+            version = $version
+            url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$tag/FFConverter-portable.zip"
+            sha256 = $hash
+            notes = "FFConverter $version для Windows"
+          }
+          $json = $manifest | ConvertTo-Json
+          [IO.File]::WriteAllText("$PWD\dist\latest.json", $json, [Text.UTF8Encoding]::new($false))
+
+      - name: Publish release
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          gh release create $tag dist\FFConverter-portable.zip dist\latest.json runtime\FFmpeg-LICENSE.txt --repo $env:GITHUB_REPOSITORY --title "FFConverter $tag" --notes "Portable-версия FFConverter для Windows. Распакуйте ZIP и запустите FFConverter.exe."
+
+      - name: Verify release assets
+        shell: pwsh
+        run: gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --json assets,url

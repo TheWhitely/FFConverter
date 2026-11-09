@@ -1,0 +1,11 @@
+/* Тултип: <span class="tooltip" data-tip="Текст">…</span> */
+.tooltip{position:relative;display:inline-block}
+.tooltip::after{
+  content:attr(data-tip);position:absolute;bottom:calc(100% + 10px);left:50%;
+  transform:translateX(-50%) translateY(4px) scale(.92);
+  background:#242424;border:1px solid var(--border);color:var(--text);
+  font-size:12px;font-weight:500;padding:7px 12px;border-radius:8px;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:all var(--t-fast);box-shadow:0 8px 24px rgba(0,0,0,.28);z-index:20;
+  will-change:opacity,transform;
+}
+.tooltip:hover::after{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
