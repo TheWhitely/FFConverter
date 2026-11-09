@@ -16,8 +16,8 @@
     <defs>
       <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></symbol>
       <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></symbol>
-      <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 6 9 6-9 6V6Z"/></symbol>
-      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m6 3 14 9-14 9V3Z"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol>
       <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
       <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
@@ -76,7 +76,7 @@
         <div class="format-list"><span>MP4</span><i></i><span>MKV</span><i></i><span>MOV</span><i></i><span>AVI</span><i></i><span>WEBM</span></div>
       </div>
     </main>
-    <footer class="welcome-footer"><span>Локальный видеоконвертер</span><span>Версия 1.0.1</span></footer>
+    <footer class="welcome-footer"><span>Локальный видеоконвертер</span><span>Версия 1.0.2</span></footer>
   </section>
 
   <section class="workspace" id="workspace" aria-label="Рабочая область" hidden>
@@ -180,23 +180,21 @@
 
         <div class="inspector-scroll">
           <div class="settings-panel" id="video-panel" role="tabpanel" aria-labelledby="video-tab">
-            <details class="setting-section" open>
-              <summary><span class="setting-icon"><svg class="icon"><use href="#i-zap"></use></svg></span><span><strong>Сжатие</strong><small id="compression-summary">Оптимальный · HEVC</small></span><svg class="icon chevron"><use href="#i-chevron"></use></svg></summary>
+            <details class="setting-section">
+              <summary><span class="setting-icon"><svg class="icon"><use href="#i-zap"></use></svg></span><span><strong>Сжатие</strong><small id="compression-summary">Баланс · HEVC</small></span><svg class="icon chevron"><use href="#i-chevron"></use></svg></summary>
               <div class="setting-content">
                 <div class="preset-grid" id="preset-grid">
-                  <button data-preset="universal" type="button"><span>Универсальный</span><small>H.264 · CPU</small></button>
-                  <button class="active" data-preset="optimal" type="button"><span>Оптимальный</span><small>HEVC · CPU</small><i><svg class="icon"><use href="#i-check"></use></svg></i></button>
-                  <button data-preset="maximum" type="button"><span>Компактный</span><small>AV1 · CPU</small></button>
-                  <button data-preset="nvidia" type="button"><span>Быстрый</span><small>HEVC · NVIDIA</small></button>
+                  <button data-preset="quality" type="button"><span>Качество</span><small>AV1 · NVIDIA · CQ 32</small></button>
+                  <button class="active" data-preset="balance" type="button"><span>Баланс</span><small>HEVC · NVIDIA · CQ 21</small><i><svg class="icon"><use href="#i-check"></use></svg></i></button>
                 </div>
                 <div class="control-block quality-control">
-                  <div class="control-label"><label for="quality-range">Качество</label><span class="value-badge" id="quality-value">CRF 23 · Высокое</span></div>
-                  <input id="quality-range" type="range" min="15" max="35" value="23" style="--val:40%">
+                  <div class="control-label"><label for="quality-range">Качество</label><span class="value-badge" id="quality-value">CQ 21 · Высокое</span></div>
+                  <input id="quality-range" type="range" min="15" max="35" value="21" style="--val:30%">
                   <div class="range-caption"><span>Выше качество</span><span>Меньше файл</span></div>
                 </div>
                 <div class="field-row">
                   <label class="select-field"><span>Кодек</span><span class="select-wrap"><select id="codec-select"><option value="H.264">H.264</option><option value="HEVC" selected>HEVC / H.265</option><option value="AV1">AV1</option></select><svg class="icon"><use href="#i-chevron"></use></svg></span></label>
-                  <label class="select-field"><span>Устройство</span><span class="select-wrap"><select id="encoder-select"><option>CPU</option><option>NVIDIA NVENC</option><option>Intel Quick Sync</option></select><svg class="icon"><use href="#i-chevron"></use></svg></span></label>
+                  <label class="select-field"><span>Устройство</span><span class="select-wrap"><select id="encoder-select"><option>CPU</option><option selected>NVIDIA NVENC</option><option>Intel Quick Sync</option></select><svg class="icon"><use href="#i-chevron"></use></svg></span></label>
                 </div>
                 <div class="inline-note"><svg class="icon"><use href="#i-cpu"></use></svg><span id="encoder-note">Максимальная совместимость настроек с вашим устройством будет проверена при экспорте.</span></div>
               </div>
@@ -296,7 +294,7 @@
       <span class="eyebrow modal-eyebrow">Настройки</span><h2 id="help-modal-title">FFConverter</h2>
       <label class="accent-setting" for="accent-color"><span><strong>Акцентный цвет</strong><small>Основной цвет интерфейса</small></span><span class="accent-picker"><input id="accent-color" type="color" value="#fa5782"><span id="accent-value">#FA5782</span></span></label>
       <section class="update-setting" aria-label="Обновления">
-        <div class="update-setting-row"><div><strong>Обновления</strong><span id="update-status">Версия 1.0.1</span></div><button class="btn btn-dark btn-sm" id="update-check" type="button">Проверить</button></div>
+        <div class="update-setting-row"><div><strong>Обновления</strong><span id="update-status">Версия 1.0.2</span></div><button class="btn btn-dark btn-sm" id="update-check" type="button">Проверить</button></div>
         <div class="update-progress" id="update-progress" hidden><div class="update-progress-track"><span id="update-progress-bar"></span></div><span id="update-progress-value">0%</span></div>
       </section>
       <div class="shortcut-list"><div><span>Воспроизведение / пауза</span><kbd>Пробел</kbd></div><div><span>Перемотка на 5 секунд</span><span><kbd>←</kbd> <kbd>→</kbd></span></div><div><span>Сбросить обрезку</span><kbd>R</kbd></div><div><span>Закрыть окно</span><kbd>Esc</kbd></div></div>
@@ -308,11 +306,12 @@
   <div class="app-modal" id="update-modal" role="dialog" aria-modal="true" aria-labelledby="update-modal-title" hidden>
     <div class="modal-card">
       <span class="modal-icon"><svg class="icon"><use href="#i-reset"></use></svg></span>
-      <span class="eyebrow modal-eyebrow">Обновление готово</span>
+      <span class="eyebrow modal-eyebrow" id="update-modal-eyebrow">Доступно обновление</span>
       <h2 id="update-modal-title">Новая версия FFConverter</h2>
       <p id="update-version-label"></p>
       <p id="update-notes"></p>
-      <div class="modal-actions"><button class="btn btn-primary full-width" id="update-install" type="button">Обновить и перезапустить</button><button class="btn btn-dark full-width" data-close-modal type="button">Позже</button></div>
+      <div class="export-progress" id="update-modal-progress" hidden><div><span id="update-modal-progress-value">0%</span></div><div class="export-progress-track"><span id="update-modal-progress-bar"></span></div></div>
+      <div class="modal-actions"><button class="btn btn-primary full-width" id="update-install" type="button">Скачать и установить</button><button class="btn btn-dark full-width" data-close-modal type="button">Позже</button></div>
     </div>
   </div>
 

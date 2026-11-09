@@ -1,9 +1,6 @@
 use crate::media::data_dir;
 use serde_json::Value;
-use std::{path::Path, process::Command};
-
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
+use std::path::Path;
 
 pub fn initial_file() -> Option<String> {
     std::env::args_os().skip(1).find_map(|arg| {
@@ -26,14 +23,45 @@ pub fn save_settings(settings: Value) -> Result<(), String> {
     std::fs::rename(temporary, path).map_err(|e| e.to_string())
 }
 
+#[cfg(windows)]
 pub fn reveal(path: &str) -> Result<(), String> {
-    if !Path::new(path).exists() { return Err("Файл не найден.".into()); }
-    let mut command = Command::new("explorer.exe");
-    command.arg(format!("/select,{}", path));
-    #[cfg(windows)]
-    command.creation_flags(0x08000000);
-    command.spawn().map_err(|e| e.to_string())?;
+    use std::{ffi::c_void, os::windows::ffi::OsStrExt};
+    if !Path::new(path).is_file() { return Err("Файл не найден.".into()); }
+    #[link(name = "shell32")]
+    extern "system" {
+        fn SHParseDisplayName(name: *const u16, context: *const c_void, item: *mut *mut c_void, attributes: u32, out_attributes: *mut u32) -> i32;
+        fn SHOpenFolderAndSelectItems(item: *const c_void, count: u32, items: *const c_void, flags: u32) -> i32;
+    }
+    #[link(name = "ole32")]
+    extern "system" {
+        fn CoInitializeEx(reserved: *const c_void, model: u32) -> i32;
+        fn CoUninitialize();
+        fn CoTaskMemFree(memory: *mut c_void);
+    }
+    let native_path = path.replace('/', "\\");
+    let wide = std::ffi::OsStr::new(&native_path).encode_wide().chain(Some(0)).collect::<Vec<_>>();
+    unsafe {
+        let com = CoInitializeEx(std::ptr::null(), 2);
+        let uninitialize = com >= 0;
+        let mut item = std::ptr::null_mut();
+        let parsed = SHParseDisplayName(wide.as_ptr(), std::ptr::null(), &mut item, 0, std::ptr::null_mut());
+        if parsed < 0 {
+            if uninitialize { CoUninitialize(); }
+            return Err(format!("Windows не смогла открыть путь: 0x{:08x}", parsed as u32));
+        }
+        let opened = SHOpenFolderAndSelectItems(item, 0, std::ptr::null(), 0);
+        CoTaskMemFree(item);
+        if uninitialize { CoUninitialize(); }
+        if opened < 0 {
+            return Err(format!("Windows не смогла показать файл: 0x{:08x}", opened as u32));
+        }
+    }
     Ok(())
+}
+
+#[cfg(not(windows))]
+pub fn reveal(_path: &str) -> Result<(), String> {
+    Err("Показ файла поддерживается только в Windows.".into())
 }
 
 #[cfg(windows)]

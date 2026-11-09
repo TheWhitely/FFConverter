@@ -174,7 +174,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .preview-badge .status-dot { width: 5px; height: 5px; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 .center-play { position: absolute; z-index: 4; top: 50%; left: 50%; width: 58px; height: 58px; display: grid; place-items: center; transform: translate(-50%, -50%); border: 1px solid rgba(255,255,255,.22); border-radius: 50%; color: white; background: rgba(20,20,20,.5); cursor: pointer; transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast), opacity var(--t-fast); }
 .center-play:hover { background: var(--accent); border-color: var(--accent); transform: translate(-50%, -50%) scale(1.06); }
-.center-play .icon { width: 24px; height: 24px; margin-left: 3px; fill: currentColor; stroke-width: 1.4; }
+.center-play .icon { width: 24px; height: 24px; fill: currentColor; stroke-width: 1.4; }
 .center-play.playing { opacity: 0; }
 .preview-stage:hover .center-play.playing { opacity: .75; }
 .playback-bar { height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 14px; border-top: 1px solid var(--border); background: #191919; flex: 0 0 auto; }
@@ -184,7 +184,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .player-button.primary-play { margin-right: 2px; color: #fff; border-color: var(--accent); background: var(--accent); }
 .player-button.primary-play:hover { color: white; background: var(--accent-2); }
 .primary-play .icon { fill: currentColor; width: 15px; height: 15px; }
-.primary-play.is-playing .icon, .center-play.is-playing .icon { fill: none; }
+.primary-play.is-playing .icon, .center-play.is-playing .icon { fill: currentColor; stroke: none; }
 .playback-time { display: flex; align-items: center; gap: 7px; margin-left: 9px; color: var(--text-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
 .playback-time strong { color: var(--text); font-weight: 500; }
 .preview-file-label { max-width: 180px; margin-right: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); font-size: 10px; }

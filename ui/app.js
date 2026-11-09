@@ -61,10 +61,8 @@
   };
 
   const presets = {
-    universal: { codec: 'H.264', encoder: 'CPU', quality: 22, label: 'Универсальный' },
-    optimal: { codec: 'HEVC', encoder: 'CPU', quality: 23, label: 'Оптимальный' },
-    maximum: { codec: 'AV1', encoder: 'CPU', quality: 30, label: 'Компактный' },
-    nvidia: { codec: 'HEVC', encoder: 'NVIDIA NVENC', quality: 24, label: 'Быстрый' }
+    quality: { codec: 'AV1', encoder: 'NVIDIA NVENC', quality: 32, label: 'Качество' },
+    balance: { codec: 'HEVC', encoder: 'NVIDIA NVENC', quality: 21, label: 'Баланс' }
   };
 
   const videoFilters = [{ name: 'Видео', extensions: ['mp4', 'mkv', 'mov', 'avi', 'webm', 'm4v', 'wmv', 'flv', 'ts', 'm2ts'] }];
@@ -633,7 +631,7 @@
       : info.available ? `Доступна версия ${info.latestVersion}`
       : `Установлена последняя версия · ${info.currentVersion}`;
     $('#update-status').textContent = status;
-    $('#update-check').textContent = info.downloaded ? 'Установить' : 'Проверить';
+    $('#update-check').textContent = info.downloaded ? 'Установить' : info.available ? 'Обновить' : 'Проверить';
     $('#update-check').disabled = info.downloading;
     $('#update-progress').hidden = !info.downloading;
     if (!info.downloading) {
@@ -642,29 +640,56 @@
     }
   }
 
-  function showUpdateReady() {
+  function showUpdateAvailable() {
     const info = state.update;
-    if (!info?.downloaded || state.updatePromptShown) return;
+    if (!info?.available || state.updatePromptShown) return;
     state.updatePromptShown = true;
+    $('#update-modal-eyebrow').textContent = info.downloaded ? 'Обновление готово' : 'Доступно обновление';
     $('#update-version-label').textContent = `Версия ${info.currentVersion} → ${info.latestVersion}`;
     $('#update-notes').textContent = info.notes.trim() || 'Настройки и файлы кэша будут сохранены.';
     $('#update-install').disabled = Boolean(state.activeJob);
-    $('#update-install').textContent = state.activeJob ? 'Дождитесь завершения экспорта' : 'Обновить и перезапустить';
+    $('#update-install').textContent = state.activeJob ? 'Дождитесь завершения экспорта' : info.downloaded ? 'Обновить и перезапустить' : 'Скачать и установить';
+    $('#update-modal-progress').hidden = true;
     openModal(elements.updateModal);
   }
 
-  async function downloadUpdate() {
+  async function installDownloadedUpdate() {
+    if (!state.update?.downloaded) return;
+    if (state.activeJob) { toast('Дождитесь завершения экспорта.', 'warning'); return; }
+    $('#update-install').disabled = true;
+    try { await invoke('install_update'); }
+    catch (error) {
+      $('#update-install').disabled = false;
+      toast(String(error), 'error', { duration: 7000 });
+    }
+  }
+
+  async function downloadUpdate(installAfter = false) {
     if (state.updateBusy || !state.update?.available) return;
+    if (state.update.downloaded) {
+      if (installAfter) await installDownloadedUpdate();
+      return;
+    }
     state.updateBusy = true;
     renderUpdate({ ...state.update, downloading: true });
+    if (installAfter) {
+      $('#update-modal-progress').hidden = false;
+      $('#update-install').disabled = true;
+      $('#update-install').textContent = 'Скачивание…';
+    }
     try {
       const info = await invoke('download_update');
       renderUpdate(info);
-      showUpdateReady();
+      if (installAfter) await installDownloadedUpdate();
+      else showUpdateAvailable();
     } catch (error) {
       $('#update-status').textContent = String(error);
       $('#update-progress').hidden = true;
+      $('#update-modal-progress').hidden = true;
       $('#update-check').disabled = false;
+      $('#update-install').disabled = false;
+      $('#update-install').textContent = 'Повторить';
+      toast(String(error), 'error', { duration: 7000 });
     } finally {
       state.updateBusy = false;
     }
@@ -672,7 +697,7 @@
 
   async function checkForUpdates(manual = false) {
     if (state.updateBusy) return;
-    if (state.update?.downloaded) { showUpdateReady(); return; }
+    if (state.update?.available) { showUpdateAvailable(); return; }
     state.updateBusy = true;
     $('#update-check').disabled = true;
     $('#update-status').textContent = 'Проверка обновлений…';
@@ -680,8 +705,7 @@
       const info = await invoke('check_for_updates');
       state.updateBusy = false;
       renderUpdate(info);
-      if (info.downloaded) showUpdateReady();
-      else if (info.available) await downloadUpdate();
+      if (info.available) showUpdateAvailable();
       else if (manual) toast('Установлена последняя версия.', 'success');
     } catch (error) {
       $('#update-status').textContent = 'Не удалось проверить обновления. Повторите попытку позже.';
@@ -869,7 +893,7 @@
 
   function resetSettings() {
     applyAccent('#fa5782');
-    selectPreset('optimal');
+    selectPreset('balance');
     elements.container.value = 'MP4';
     $('#width-input').value = String(state.originalWidth);
     $('#height-input').value = String(state.originalHeight);
@@ -1171,6 +1195,9 @@
       $('#update-progress').hidden = false;
       $('#update-progress-bar').style.width = `${payload.percent}%`;
       $('#update-progress-value').textContent = `${payload.percent}%`;
+      $('#update-modal-progress-bar').style.width = `${payload.percent}%`;
+      $('#update-modal-progress-value').textContent = `${payload.percent}%`;
+      $('#update-install').textContent = `Скачивание… ${payload.percent}%`;
       if (state.update) $('#update-status').textContent = `Скачивание версии ${state.update.latestVersion}…`;
     });
     const updateError = await invoke('take_update_error');
@@ -1195,11 +1222,11 @@
       const intel = Array.from(elements.encoder.options).find((option) => option.value === 'Intel Quick Sync');
       if (nvidia) nvidia.disabled = !support.nvidia;
       if (intel) intel.disabled = !support.intel;
-      $('#preset-grid [data-preset="nvidia"]').disabled = !support.nvidia;
+      $('#preset-grid [data-preset="balance"]').disabled = !support.nvidia;
+      $('#preset-grid [data-preset="quality"]').disabled = !support.nvidiaAv1;
       $('#encoder-note').textContent = support.nvidia || support.intel
         ? 'Доступно аппаратное кодирование. CPU обычно даёт меньший файл при том же качестве, GPU работает быстрее.'
         : 'На этом компьютере доступен CPU. Он универсален и обычно эффективнее сжимает, но работает медленнее GPU.';
-      if (!support.av1) $('#preset-grid [data-preset="maximum"]').disabled = true;
       if (elements.encoder.selectedOptions[0]?.disabled) {
         elements.encoder.value = 'CPU';
         $$('#preset-grid button').forEach((button) => button.classList.remove('active'));
@@ -1384,21 +1411,17 @@
   $('#loading-change-file').addEventListener('click', openFiles);
   $('#loading-home').addEventListener('click', showWelcome);
   $('#update-check').addEventListener('click', () => {
-    if (state.update?.downloaded) {
+    if (state.update?.available) {
       state.updatePromptShown = false;
-      showUpdateReady();
+      showUpdateAvailable();
     } else {
       checkForUpdates(true);
     }
   });
   $('#update-install').addEventListener('click', async () => {
     if (state.activeJob) { toast('Дождитесь завершения экспорта.', 'warning'); return; }
-    $('#update-install').disabled = true;
-    try { await invoke('install_update'); }
-    catch (error) {
-      $('#update-install').disabled = false;
-      toast(String(error), 'error', { duration: 7000 });
-    }
+    if (state.update?.downloaded) await installDownloadedUpdate();
+    else await downloadUpdate(true);
   });
   $$('.app-modal').forEach((modal) => modal.addEventListener('click', (event) => { if (event.target === modal) closeModals(); }));
   document.addEventListener('contextmenu', (event) => event.preventDefault());

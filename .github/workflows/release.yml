@@ -68,11 +68,16 @@ jobs:
           $version = (Select-String -Path src-tauri\Cargo.toml -Pattern '^version = "([^"]+)"').Matches.Groups[1].Value
           $tag = $env:GITHUB_REF_NAME
           $hash = (Get-FileHash dist\FFConverter-portable.zip -Algorithm SHA256).Hash.ToLower()
+          $changelog = [IO.File]::ReadAllText("$PWD\CHANGELOG.md")
+          $section = [regex]::Match($changelog, "(?ms)^## \[$([regex]::Escape($version))\][^\r\n]*\r?\n(.*?)(?=^## \[|\z)")
+          if (-not $section.Success) { throw "Добавьте версию $version в CHANGELOG.md" }
+          $notes = $section.Groups[1].Value.Trim()
+          [IO.File]::WriteAllText("$PWD\dist\release-notes.txt", $notes, [Text.UTF8Encoding]::new($false))
           $manifest = @{
             version = $version
             url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$tag/FFConverter-portable.zip"
             sha256 = $hash
-            notes = "FFConverter $version для Windows"
+            notes = $notes
           }
           $json = $manifest | ConvertTo-Json
           [IO.File]::WriteAllText("$PWD\dist\latest.json", $json, [Text.UTF8Encoding]::new($false))
@@ -81,11 +86,7 @@ jobs:
         shell: pwsh
         run: |
           $tag = $env:GITHUB_REF_NAME
-          $version = (Select-String -Path src-tauri\Cargo.toml -Pattern '^version = "([^"]+)"').Matches.Groups[1].Value
-          $changelog = [IO.File]::ReadAllText("$PWD\CHANGELOG.md")
-          $section = [regex]::Match($changelog, "(?ms)^## \[$([regex]::Escape($version))\][^\r\n]*\r?\n(.*?)(?=^## \[|\z)")
-          if (-not $section.Success) { throw "Добавьте версию $version в CHANGELOG.md" }
-          $notes = $section.Groups[1].Value.Trim()
+          $notes = [IO.File]::ReadAllText("$PWD\dist\release-notes.txt")
           $notes += "`n`n[Полный changelog](https://github.com/$env:GITHUB_REPOSITORY/blob/main/CHANGELOG.md)"
           gh release create $tag dist\FFConverter-portable.zip dist\latest.json runtime\FFmpeg-LICENSE.txt --repo $env:GITHUB_REPOSITORY --title "FFConverter $tag" --notes $notes
 

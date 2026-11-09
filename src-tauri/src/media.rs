@@ -36,6 +36,7 @@ pub struct MediaInfo {
 #[serde(rename_all = "camelCase")]
 pub struct EncoderSupport {
     pub nvidia: bool,
+    pub nvidia_av1: bool,
     pub intel: bool,
     pub av1: bool,
     pub hevc: bool,
@@ -139,6 +140,7 @@ pub fn encoders() -> Result<EncoderSupport, String> {
     let text = String::from_utf8_lossy(&output.stdout);
     Ok(EncoderSupport {
         nvidia: text.contains("hevc_nvenc") && hardware_encoder("hevc_nvenc"),
+        nvidia_av1: text.contains("av1_nvenc") && hardware_encoder("av1_nvenc"),
         intel: text.contains("hevc_qsv") && hardware_encoder("hevc_qsv"),
         av1: text.contains("libsvtav1"),
         hevc: text.contains("libx265"),
