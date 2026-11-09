@@ -1,6 +1,6 @@
 [package]
 name = "ffconverter"
-version = "1.0.2"
+version = "1.0.3"
 description = "Portable video converter powered by FFmpeg"
 authors = ["Whitely"]
 edition = "2021"

@@ -57,7 +57,9 @@
     saveTimer: null,
     update: null,
     updateBusy: false,
-    updatePromptShown: false
+    updatePromptShown: false,
+    seekFrame: null,
+    scrubbing: false
   };
 
   const presets = {
@@ -163,7 +165,7 @@
     return {
       conversion, compression, resolution, crop, extension, width, height, transformed, fast, codec, encoder, copyVideo,
       quality: compression ? Number(elements.quality.value) : 23,
-      audioCodec: extension === 'webm' ? 'opus' : $('.audio-output').open ? $('#audio-codec').value : 'original',
+      audioCodec: state.exportKind === 'audio' ? $('#audio-codec').value : extension === 'webm' ? 'opus' : $('.audio-output').open ? $('#audio-codec').value : 'original',
       keepMetadata: conversion ? $('#keep-metadata').checked : true,
       keepSubtitles: conversion ? $('#keep-subtitles').checked : true
     };
@@ -176,8 +178,17 @@
     toast('Для кадрирования или изменения разрешения нужен точный режим с перекодированием.', 'info', { duration: 4500 });
   }
 
+  function selectedAudioTracks() {
+    return state.audio.filter((track) => track.enabled);
+  }
+
+  function audioExtension() {
+    return ({ aac: 'm4a', mp3: 'mp3', flac: 'flac', wav: 'wav', opus: 'ogg' })[$('#audio-codec').value] || 'mp3';
+  }
+
   function currentExtension() {
-    return state.exportKind === 'video' ? videoOptions().extension : state.exportKind;
+    if (state.exportKind === 'video') return videoOptions().extension;
+    return state.exportKind === 'audio' ? audioExtension() : state.exportKind;
   }
 
   function outputName() {
@@ -185,12 +196,13 @@
     const extension = currentExtension();
     if (state.exportKind === 'video') return `${baseFileName(name)}_${videoOptions().copyVideo ? 'cut' : 'converted'}.${extension}`;
     if (state.exportKind === 'gif') return `${baseFileName(name)}.gif`;
+    if (state.exportKind === 'audio') return `${baseFileName(name)}_audio.${extension}`;
     return `${baseFileName(name)}_${String(Math.round(state.position * 1000)).padStart(7, '0')}.${extension}`;
   }
 
   function updateOutputName() {
     const options = videoOptions();
-    const extension = state.exportKind === 'video' ? options.extension : state.exportKind;
+    const extension = currentExtension();
     $('#container-select option[value="original"]').textContent = `Оригинал (${originalExtension().toUpperCase()})`;
     const sequence = ['png', 'jpg'].includes(state.exportKind) && !$('#single-frame').checked;
     $('#output-file-name').textContent = sequence ? `frame_00001.${extension} …` : outputName();
@@ -199,14 +211,16 @@
     const videoLabel = options.copyVideo ? 'Без перекодирования' : options.compression ? options.codec : `Авто · ${options.codec}`;
     $('#export-summary').textContent = state.exportKind === 'video'
       ? `${extension.toUpperCase()} · ${videoLabel} · ${resolution}`
-      : `${state.exportKind.toUpperCase()} · ${resolution}${state.exportKind === 'gif' ? ` · ${$('#fps-range').value} FPS` : ''}`;
+      : state.exportKind === 'audio'
+        ? `${extension.toUpperCase()} · ${selectedAudioTracks().length} дор. · ${formatTime(state.start)} — ${formatTime(state.end)}`
+        : `${state.exportKind.toUpperCase()} · ${resolution}${state.exportKind === 'gif' ? ` · ${$('#fps-range').value} FPS` : ''}`;
     const activePreset = $('#preset-grid button.active')?.dataset.preset;
     $('#compression-summary').textContent = !options.compression ? 'Не применяется' : options.copyVideo ? 'Без перекодирования' : `${presets[activePreset]?.label || 'Пользовательский'} · ${elements.codec.value}`;
     $('#conversion-section summary small').textContent = options.conversion && elements.container.value !== 'original' ? `${extension.toUpperCase()} · контейнер` : `Оригинал · ${originalExtension().toUpperCase()}`;
     const activeResolution = $('#resolution-presets button.active')?.textContent || 'Пользовательское';
     $('#resolution-summary').textContent = options.resolution ? `${activeResolution} · ${options.width} × ${options.height}` : 'Не применяется';
     $('#crop-summary').textContent = !sectionOpen('crop') ? 'Не применяется' : state.crop ? `${Math.round(state.crop.width * state.originalWidth) & ~1} × ${Math.round(state.crop.height * state.originalHeight) & ~1} · ${state.cropRatio}` : 'Весь кадр';
-    $('#export-button > span').textContent = state.activeJob ? 'Экспорт…' : state.exportKind === 'video' ? 'Экспортировать' : `Сохранить ${extension.toUpperCase()}`;
+    $('#export-button > span').textContent = state.activeJob ? 'Экспорт…' : state.exportKind === 'video' ? 'Экспортировать' : state.exportKind === 'audio' ? 'Извлечь аудио' : `Сохранить ${extension.toUpperCase()}`;
     if (state.position >= 0) $('#frame-time-label').textContent = `Позиция ${formatTime(state.position, true)}`;
   }
 
@@ -231,13 +245,22 @@
     });
   }
 
-  function seek(value, fromVideo = false) {
-    state.position = clamp(value, 0, state.duration);
-    if (!fromVideo && !state.isDemo && Number.isFinite(elements.video.duration)) {
-      elements.video.currentTime = state.position;
+  function applyScheduledSeek() {
+    if (state.seekFrame !== null) cancelAnimationFrame(state.seekFrame);
+    state.seekFrame = null;
+    if (state.isDemo || !Number.isFinite(elements.video.duration)) return;
+    elements.video.currentTime = state.position;
+    if (!state.scrubbing) {
       state.audioPlayers.forEach((player) => {
         if (Number.isFinite(player.audio.duration)) player.audio.currentTime = state.position;
       });
+    }
+  }
+
+  function seek(value, fromVideo = false) {
+    state.position = clamp(value, 0, state.duration);
+    if (!fromVideo && !state.isDemo && state.seekFrame === null) {
+      state.seekFrame = requestAnimationFrame(applyScheduledSeek);
     }
     updateTimeline();
     if (state.exportKind !== 'video' && $('#single-frame').checked) updateOutputName();
@@ -289,6 +312,7 @@
     } else {
       try {
         if (state.audioContext) await state.audioContext.resume();
+        applyScheduledSeek();
         await elements.video.play();
         syncAudioPlayback();
       } catch {
@@ -321,6 +345,7 @@
   function syncAudioPlayback() {
     state.audioPlayers.forEach((player) => {
       const audio = player.audio;
+      if (state.scrubbing) { audio.pause(); return; }
       if (Number.isFinite(audio.duration) && Math.abs(audio.currentTime - elements.video.currentTime) > .12) {
         audio.currentTime = elements.video.currentTime;
       }
@@ -384,6 +409,9 @@
 
   function resetPlayback() {
     stopDemoPlayback();
+    if (state.seekFrame !== null) cancelAnimationFrame(state.seekFrame);
+    state.seekFrame = null;
+    state.scrubbing = false;
     elements.video.pause();
     clearAudioPlayers();
     setPlaying(false);
@@ -610,7 +638,7 @@
     $$('#preset-grid button').forEach((button) => button.classList.toggle('active', button.dataset.preset === name));
     elements.codec.value = preset.codec;
     elements.encoder.value = preset.encoder;
-    if (elements.encoder.value !== preset.encoder) {
+    if (elements.encoder.selectedOptions[0]?.disabled) {
       elements.encoder.value = 'CPU';
       toast('Аппаратный кодировщик недоступен, выбран CPU.', 'warning');
     }
@@ -866,6 +894,7 @@
         track.enabled = enabled.checked;
         article.classList.toggle('disabled', !track.enabled);
         syncPreviewAudio();
+        updateOutputName();
       });
       volume.addEventListener('input', () => {
         track.volume = Number(volume.value) / 100;
@@ -892,7 +921,6 @@
   }
 
   function resetSettings() {
-    applyAccent('#fa5782');
     selectPreset('balance');
     elements.container.value = 'MP4';
     $('#width-input').value = String(state.originalWidth);
@@ -916,7 +944,10 @@
   }
 
   function updateAudioSummary() {
-    $('.audio-output summary small').textContent = $('.audio-output').open ? `${$('#audio-codec').selectedOptions[0].textContent} · ${$('#audio-bitrate').value} kb/s` : 'Не применяется';
+    const codec = $('#audio-codec').value;
+    const bitrate = ['flac', 'wav'].includes(codec) ? '' : ` · ${$('#audio-bitrate').value} kb/s`;
+    $('.audio-output summary small').textContent = $('.audio-output').open ? `${$('#audio-codec').selectedOptions[0].textContent}${bitrate}` : 'Не применяется';
+    $('#audio-bitrate').disabled = ['flac', 'wav'].includes(codec);
     updateOutputName();
     scheduleSave();
   }
@@ -925,27 +956,39 @@
     state.exportKind = kind;
     $$('#export-kind button').forEach((button) => button.classList.toggle('active', button.dataset.kind === kind));
     $$('#image-format button').forEach((button) => button.classList.toggle('active', button.dataset.format.toLowerCase() === kind));
-    if (kind === 'gif') {
-      $('#single-frame').checked = false;
-      $('#single-frame').disabled = true;
+    const audioCodec = $('#audio-codec');
+    let wav = $('option[value="wav"]', audioCodec);
+    if (kind === 'audio') {
+      if (!wav) {
+        wav = document.createElement('option');
+        wav.value = 'wav'; wav.textContent = 'WAV';
+        audioCodec.append(wav);
+      }
+      if (audioCodec.value === 'original') audioCodec.value = 'mp3';
+      $('.audio-output').open = true;
     } else {
-      $('#single-frame').disabled = false;
+      if (audioCodec.value === 'wav') audioCodec.value = 'aac';
+      wav?.remove();
     }
+    $('#single-frame').disabled = kind === 'gif' || kind === 'audio';
+    if (kind === 'gif') $('#single-frame').checked = false;
     $('#fps-range').disabled = !(kind === 'gif' || (['png', 'jpg'].includes(kind) && !$('#single-frame').checked));
     $('#fps-value').textContent = $('#fps-range').disabled ? 'Для GIF и серии' : `${$('#fps-range').value} FPS`;
     elements.container.disabled = kind !== 'video';
     $$('#trim-mode button').forEach((button) => button.disabled = kind !== 'video');
-    updateOutputName();
+    $('.audio-overview div span').textContent = kind === 'audio' ? 'Выбранные дорожки будут смешаны в одну' : 'Настройте каждую дорожку отдельно';
+    updateAudioSummary();
   }
 
   function exportSettings(output) {
     const options = videoOptions();
+    const singleImage = ['png', 'jpg'].includes(state.exportKind) && $('#single-frame').checked;
     return {
       input: state.media.path,
       output,
       kind: state.exportKind,
-      start: state.exportKind !== 'video' && state.exportKind !== 'gif' && $('#single-frame').checked ? state.position : state.start,
-      end: state.exportKind !== 'video' && state.exportKind !== 'gif' && $('#single-frame').checked ? state.position + .001 : state.end,
+      start: singleImage ? state.position : state.start,
+      end: singleImage ? state.position + .001 : state.end,
       fast: options.copyVideo,
       copyVideo: options.copyVideo,
       codec: options.codec,
@@ -993,6 +1036,10 @@
       return;
     }
     if (state.end <= state.start) { toast('Выберите фрагмент на таймлайне.', 'warning'); return; }
+    if (state.exportKind === 'audio' && !selectedAudioTracks().length) {
+      toast('Выберите хотя бы одну аудиодорожку.', 'warning');
+      return;
+    }
     let output;
     const extension = currentExtension();
     const sequence = ['png', 'jpg'].includes(state.exportKind) && !$('#single-frame').checked;
@@ -1031,6 +1078,7 @@
     $('#cancel-export').hidden = true;
     $('#export-done').hidden = false;
     const done = event.status === 'done';
+    if (done && event.output) state.exportOutput = event.output;
     $('#export-modal-title').textContent = done ? 'Готово' : event.status === 'cancelled' ? 'Экспорт отменён' : 'Ошибка экспорта';
     $('#export-modal-eyebrow').textContent = done ? 'Файл сохранён' : 'FFmpeg';
     $('#export-modal-message').textContent = event.message;
@@ -1079,7 +1127,7 @@
     $('.audio-output').addEventListener('toggle', updateAudioSummary);
     const exportKind = document.createElement('div');
     exportKind.className = 'export-kind-wrap';
-    exportKind.innerHTML = '<span>Тип результата</span><div class="segmented full export-kind" id="export-kind"><button class="active" data-kind="video" type="button">Видео</button><button data-kind="png" type="button">PNG</button><button data-kind="jpg" type="button">JPG</button><button data-kind="gif" type="button">GIF</button></div>';
+    exportKind.innerHTML = '<span>Тип результата</span><div class="segmented full export-kind" id="export-kind"><button class="active" data-kind="video" type="button">Видео</button><button data-kind="png" type="button">PNG</button><button data-kind="jpg" type="button">JPG</button><button data-kind="gif" type="button">GIF</button><button data-kind="audio" type="button">Аудио</button></div>';
     $('.output-name').before(exportKind);
     const metadata = $$('#video-panel .switch-row input[type="checkbox"]');
     metadata[0].id = 'keep-metadata';
@@ -1087,7 +1135,7 @@
     const audioSelects = $$('.audio-output select');
     audioSelects[0].id = 'audio-codec';
     audioSelects[1].id = 'audio-bitrate';
-    audioSelects[0].innerHTML = '<option value="aac">AAC</option><option value="mp3">MP3</option><option value="opus">Opus</option><option value="flac">FLAC</option><option value="original">Оригинал</option>';
+    audioSelects[0].innerHTML = '<option value="aac">AAC / M4A</option><option value="mp3">MP3</option><option value="opus">Opus / OGG</option><option value="flac">FLAC</option><option value="original">Оригинал</option>';
     audioSelects[1].innerHTML = '<option value="128">128 kb/s</option><option value="192" selected>192 kb/s</option><option value="256">256 kb/s</option><option value="320">320 kb/s</option>';
     const resolution = $('#resolution-presets');
     if (!$$('button', resolution).some((button) => button.textContent === '1080p')) {
@@ -1222,14 +1270,9 @@
       const intel = Array.from(elements.encoder.options).find((option) => option.value === 'Intel Quick Sync');
       if (nvidia) nvidia.disabled = !support.nvidia;
       if (intel) intel.disabled = !support.intel;
-      $('#preset-grid [data-preset="balance"]').disabled = !support.nvidia;
-      $('#preset-grid [data-preset="quality"]').disabled = !support.nvidiaAv1;
-      $('#encoder-note').textContent = support.nvidia || support.intel
-        ? 'Доступно аппаратное кодирование. CPU обычно даёт меньший файл при том же качестве, GPU работает быстрее.'
-        : 'На этом компьютере доступен CPU. Он универсален и обычно эффективнее сжимает, но работает медленнее GPU.';
+      $('#encoder-note').textContent = 'Если выбранное аппаратное кодирование недоступно, пресет автоматически использует CPU.';
       if (elements.encoder.selectedOptions[0]?.disabled) {
         elements.encoder.value = 'CPU';
-        $$('#preset-grid button').forEach((button) => button.classList.remove('active'));
         updateQuality(); updateCompressionSummary();
       }
     } catch (error) { toast(String(error), 'warning'); }
@@ -1314,12 +1357,23 @@
   elements.timeline.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
     dragType = event.target.closest('[data-drag]')?.dataset.drag || 'playhead';
+    state.scrubbing = dragType === 'playhead' && !state.isDemo;
+    if (state.scrubbing) syncAudioPlayback();
     elements.timeline.setPointerCapture(event.pointerId);
     moveTimeline(event); event.preventDefault();
   });
   elements.timeline.addEventListener('pointermove', (event) => { if (dragType) moveTimeline(event); });
-  elements.timeline.addEventListener('pointerup', (event) => { dragType = null; if (elements.timeline.hasPointerCapture(event.pointerId)) elements.timeline.releasePointerCapture(event.pointerId); });
-  elements.timeline.addEventListener('pointercancel', () => { dragType = null; });
+  const finishTimelineDrag = (event) => {
+    dragType = null;
+    if (state.scrubbing) {
+      state.scrubbing = false;
+      applyScheduledSeek();
+      syncAudioPlayback();
+    }
+    if (event && elements.timeline.hasPointerCapture(event.pointerId)) elements.timeline.releasePointerCapture(event.pointerId);
+  };
+  elements.timeline.addEventListener('pointerup', finishTimelineDrag);
+  elements.timeline.addEventListener('pointercancel', finishTimelineDrag);
   $$('[data-drag]').forEach((handle) => handle.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();

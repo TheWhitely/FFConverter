@@ -126,10 +126,61 @@ fn video_encoder(settings: &ExportSettings) -> Result<Vec<String>, String> {
     Ok(args)
 }
 
+fn audio_arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), String> {
+    let enabled = settings.audio.iter().filter(|track| track.enabled).collect::<Vec<_>>();
+    if enabled.is_empty() {
+        return Err("Выберите хотя бы одну аудиодорожку.".into());
+    }
+    let output = PathBuf::from(&settings.output);
+    if let Some(parent) = output.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let mut args = vec![
+        "-hide_banner".into(), "-y".into(),
+        "-i".into(), settings.input.clone(),
+        "-ss".into(), format!("{:.6}", settings.start),
+        "-t".into(), format!("{:.6}", (settings.end - settings.start).max(0.001)),
+    ];
+    args.push("-vn".into());
+    if enabled.len() == 1 {
+        args.extend(["-map".into(), format!("0:{}", enabled[0].index)]);
+        if (enabled[0].volume - 1.0).abs() > 0.001 {
+            args.extend(["-af".into(), format!("volume={:.4}", enabled[0].volume)]);
+        }
+    } else {
+        let mut filters = String::new();
+        for (index, track) in enabled.iter().enumerate() {
+            filters.push_str(&format!("[0:{}]volume={:.4}[a{}];", track.index, track.volume, index));
+        }
+        let inputs = (0..enabled.len()).map(|index| format!("[a{index}]")).collect::<String>();
+        filters.push_str(&format!("{inputs}amix=inputs={}:duration=longest:normalize=0[mix]", enabled.len()));
+        args.extend(["-filter_complex".into(), filters, "-map".into(), "[mix]".into()]);
+    }
+    let codec = settings.audio_codec.as_str();
+    let encoder = match codec {
+        "mp3" => "libmp3lame",
+        "aac" => "aac",
+        "flac" => "flac",
+        "wav" => "pcm_s16le",
+        "opus" => "libopus",
+        _ => return Err("Выбранный формат аудио не поддерживается.".into()),
+    };
+    args.extend(["-c:a".into(), encoder.into()]);
+    if !["flac", "wav"].contains(&codec) {
+        args.extend(["-b:a".into(), format!("{}k", settings.audio_bitrate)]);
+    }
+    args.extend(["-map_metadata".into(), "0".into(), "-progress".into(), "pipe:1".into(), "-nostats".into()]);
+    args.push(output.to_string_lossy().into_owned());
+    Ok((args, output))
+}
+
 fn arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), String> {
     if !Path::new(&settings.input).is_file() { return Err("Исходный файл не найден.".into()); }
     if settings.end <= settings.start && !(settings.single_frame && settings.kind != "video") {
         return Err("Конец фрагмента должен быть позже начала.".into());
+    }
+    if settings.kind == "audio" {
+        return audio_arguments(settings);
     }
     let input_path = Path::new(&settings.input);
     let output_path = Path::new(&settings.output);
@@ -270,7 +321,9 @@ pub fn start_export(app: AppHandle, jobs: State<'_, Jobs>, settings: ExportSetti
         let cancelled = app.state::<Jobs>().cancelled.lock().unwrap().remove(&id);
         app.state::<Jobs>().processes.lock().unwrap().remove(&id);
         let (status_text, message) = if cancelled {
-            if settings.kind != "video" && settings.kind != "gif" && !settings.single_frame {
+            if settings.kind == "audio" {
+                let _ = std::fs::remove_file(&output);
+            } else if settings.kind != "video" && settings.kind != "gif" && !settings.single_frame {
                 if let Some(folder) = output.parent() {
                     for number in 1..=100_000 {
                         let frame = folder.join(format!("frame_{number:05}.{}", settings.kind));
