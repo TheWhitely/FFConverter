@@ -58,8 +58,8 @@
     update: null,
     updateBusy: false,
     updatePromptShown: false,
-    seekFrame: null,
-    scrubbing: false
+    scrubbing: false,
+    resumeAfterScrub: false
   };
 
   const presets = {
@@ -245,25 +245,19 @@
     });
   }
 
-  function applyScheduledSeek() {
-    if (state.seekFrame !== null) cancelAnimationFrame(state.seekFrame);
-    state.seekFrame = null;
-    if (state.isDemo || !Number.isFinite(elements.video.duration)) return;
-    elements.video.currentTime = state.position;
-    if (!state.scrubbing) {
-      state.audioPlayers.forEach((player) => {
-        if (Number.isFinite(player.audio.duration)) player.audio.currentTime = state.position;
-      });
-    }
-  }
-
   function seek(value, fromVideo = false) {
     state.position = clamp(value, 0, state.duration);
-    if (!fromVideo && !state.isDemo && state.seekFrame === null) {
-      state.seekFrame = requestAnimationFrame(applyScheduledSeek);
+    if (!fromVideo && !state.isDemo && Number.isFinite(elements.video.duration)) {
+      state.audioPlayers.forEach((player) => player.audio.pause());
+      elements.video.currentTime = state.position;
     }
     updateTimeline();
     if (state.exportKind !== 'video' && $('#single-frame').checked) updateOutputName();
+  }
+
+  function scrubTo(value) {
+    state.position = clamp(value, 0, state.duration);
+    updateTimeline();
   }
 
   function setPlaying(playing) {
@@ -312,7 +306,6 @@
     } else {
       try {
         if (state.audioContext) await state.audioContext.resume();
-        applyScheduledSeek();
         await elements.video.play();
         syncAudioPlayback();
       } catch {
@@ -345,7 +338,7 @@
   function syncAudioPlayback() {
     state.audioPlayers.forEach((player) => {
       const audio = player.audio;
-      if (state.scrubbing) { audio.pause(); return; }
+      if (state.scrubbing || elements.video.seeking) { audio.pause(); return; }
       if (Number.isFinite(audio.duration) && Math.abs(audio.currentTime - elements.video.currentTime) > .12) {
         audio.currentTime = elements.video.currentTime;
       }
@@ -409,9 +402,8 @@
 
   function resetPlayback() {
     stopDemoPlayback();
-    if (state.seekFrame !== null) cancelAnimationFrame(state.seekFrame);
-    state.seekFrame = null;
     state.scrubbing = false;
+    state.resumeAfterScrub = false;
     elements.video.pause();
     clearAudioPlayers();
     setPlaying(false);
@@ -1315,6 +1307,7 @@
     if (state.audioContext) state.audioContext.resume().catch(() => {});
     syncAudioPlayback();
   });
+  elements.video.addEventListener('seeked', syncAudioPlayback);
   elements.video.addEventListener('pause', () => {
     setPlaying(false);
     state.audioPlayers.forEach((player) => player.audio.pause());
@@ -1351,14 +1344,18 @@
     const gap = Math.min(.1, state.duration / 10);
     if (dragType === 'start') state.start = clamp(Math.min(value, state.end - gap), 0, state.duration);
     if (dragType === 'end') state.end = clamp(Math.max(value, state.start + gap), 0, state.duration);
-    if (dragType === 'playhead') seek(value);
+    if (dragType === 'playhead') scrubTo(value);
     updateTimeline();
   }
   elements.timeline.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
     dragType = event.target.closest('[data-drag]')?.dataset.drag || 'playhead';
     state.scrubbing = dragType === 'playhead' && !state.isDemo;
-    if (state.scrubbing) syncAudioPlayback();
+    if (state.scrubbing) {
+      state.resumeAfterScrub = state.playing && !elements.video.paused;
+      elements.video.pause();
+      state.audioPlayers.forEach((player) => player.audio.pause());
+    }
     elements.timeline.setPointerCapture(event.pointerId);
     moveTimeline(event); event.preventDefault();
   });
@@ -1366,9 +1363,11 @@
   const finishTimelineDrag = (event) => {
     dragType = null;
     if (state.scrubbing) {
+      const resume = state.resumeAfterScrub;
       state.scrubbing = false;
-      applyScheduledSeek();
-      syncAudioPlayback();
+      state.resumeAfterScrub = false;
+      seek(state.position);
+      if (resume) togglePlayback();
     }
     if (event && elements.timeline.hasPointerCapture(event.pointerId)) elements.timeline.releasePointerCapture(event.pointerId);
   };

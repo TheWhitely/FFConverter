@@ -65,7 +65,7 @@ jobs:
       - name: Create update manifest
         shell: pwsh
         run: |
-          $version = (Select-String -Path src-tauri\Cargo.toml -Pattern '^version = "([^"]+)"').Matches.Groups[1].Value
+          $version = (Select-String -Path src-tauri\Cargo.toml -Pattern '^appVersion = "([^"]+)"').Matches.Groups[1].Value
           $tag = $env:GITHUB_REF_NAME
           $hash = (Get-FileHash dist\FFConverter-portable.zip -Algorithm SHA256).Hash.ToLower()
           $changelog = [IO.File]::ReadAllText("$PWD\CHANGELOG.md")

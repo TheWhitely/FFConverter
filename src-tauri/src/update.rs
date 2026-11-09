@@ -1,5 +1,4 @@
 use crate::media::data_dir;
-use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -12,6 +11,7 @@ use std::{
 };
 use tauri::{AppHandle, Emitter};
 
+const APP_VERSION: &str = env!("FFCONVERTER_APP_VERSION");
 const DEFAULT_MANIFEST_URL: &str = "https://github.com/TheWhitely/FFConverter/releases/latest/download/latest.json";
 
 #[derive(Clone, Deserialize)]
@@ -56,7 +56,7 @@ fn session() -> &'static Mutex<Session> {
 
 fn client(download: bool) -> Result<reqwest::blocking::Client, String> {
     let mut builder = reqwest::blocking::Client::builder()
-        .user_agent(format!("FFConverter/{}", env!("CARGO_PKG_VERSION")))
+        .user_agent(format!("FFConverter/{APP_VERSION}"))
         .connect_timeout(Duration::from_secs(15));
     if !download {
         builder = builder.timeout(Duration::from_secs(20));
@@ -80,16 +80,28 @@ fn validate_url(url: &str) -> Result<(), String> {
     Err("Для обновления разрешены только HTTPS-ссылки.".into())
 }
 
+fn version_parts(value: &str) -> Result<Vec<u64>, String> {
+    value.trim_start_matches('v').split('.').map(|part| {
+        part.parse::<u64>().map_err(|e| format!("Некорректная версия {value}: {e}"))
+    }).collect()
+}
+
+fn version_is_newer(latest: &str, current: &str) -> Result<bool, String> {
+    let mut latest = version_parts(latest)?;
+    let mut current = version_parts(current)?;
+    let length = latest.len().max(current.len());
+    latest.resize(length, 0);
+    current.resize(length, 0);
+    Ok(latest > current)
+}
+
 fn info(session: &Session) -> Result<UpdateInfo, String> {
-    let current_version = env!("CARGO_PKG_VERSION");
-    let current = Version::parse(current_version).map_err(|e| e.to_string())?;
-    let latest_version = session.manifest.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| current_version.into());
-    let latest = Version::parse(latest_version.trim_start_matches('v')).map_err(|e| format!("Некорректная версия в манифесте: {e}"))?;
+    let latest_version = session.manifest.as_ref().map(|m| m.version.clone()).unwrap_or_else(|| APP_VERSION.into());
     Ok(UpdateInfo {
-        current_version: current_version.into(),
-        latest_version,
+        current_version: APP_VERSION.into(),
+        latest_version: latest_version.clone(),
         notes: session.manifest.as_ref().and_then(|m| m.notes.clone()).unwrap_or_default(),
-        available: latest > current,
+        available: version_is_newer(&latest_version, APP_VERSION)?,
         downloading: session.downloading,
         downloaded: session.staged.is_some(),
     })
@@ -150,9 +162,8 @@ pub fn download(app: AppHandle) -> Result<UpdateInfo, String> {
         if session.downloading {
             return info(&session);
         }
-        let current = Version::parse(env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
         let manifest = session.manifest.clone().ok_or("Сначала проверьте наличие обновлений.")?;
-        if Version::parse(manifest.version.trim_start_matches('v')).map_err(|e| e.to_string())? <= current {
+        if !version_is_newer(&manifest.version, APP_VERSION)? {
             return info(&session);
         }
         if session.staged.is_some() {
