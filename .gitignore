@@ -1,6 +1,6 @@
 .tools/
 src-tauri/target/
 dist/
-runtime/*.exe
+runtime/**/*.exe
 data/
 *.log

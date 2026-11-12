@@ -148,7 +148,7 @@ fn extract(archive_path: &Path, staging: &Path) -> Result<PathBuf, String> {
         std::io::copy(&mut entry, &mut file).map_err(|e| e.to_string())?;
     }
     let package = staging.join("FFConverter");
-    for required in ["FFConverter.exe", "updater.exe", "runtime/ffmpeg.exe", "runtime/ffprobe.exe"] {
+    for required in ["FFConverter.exe", "updater.exe", "runtime/ffmpeg.exe", "runtime/ffprobe.exe", "runtime/compat/ffmpeg.exe"] {
         if !package.join(required).is_file() {
             return Err(format!("В пакете обновления отсутствует {required}."));
         }

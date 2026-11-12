@@ -43,6 +43,13 @@ jobs:
           Copy-Item "$($package.FullName)\bin\ffprobe.exe" runtime\ffprobe.exe
           $license = Get-ChildItem $package.FullName -Recurse -Filter 'LICENSE.txt' | Select-Object -First 1
           if ($license) { Copy-Item $license.FullName runtime\FFmpeg-LICENSE.txt }
+          $compatArchive = "$env:RUNNER_TEMP\ffmpeg-compat.zip"
+          $compatUnpacked = "$env:RUNNER_TEMP\ffmpeg-compat"
+          Invoke-WebRequest 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-05-31-14-01/ffmpeg-n7.1.1-20-g9373b442a6-win64-gpl-7.1.zip' -OutFile $compatArchive
+          Expand-Archive $compatArchive $compatUnpacked
+          $compatPackage = Get-ChildItem $compatUnpacked -Directory | Select-Object -First 1
+          New-Item -ItemType Directory -Force runtime\compat | Out-Null
+          Copy-Item "$($compatPackage.FullName)\bin\ffmpeg.exe" runtime\compat\ffmpeg.exe
 
       - name: Build FFConverter
         run: tauri build --no-bundle
@@ -54,11 +61,12 @@ jobs:
         shell: pwsh
         run: |
           $root = 'dist\FFConverter'
-          New-Item -ItemType Directory -Force "$root\runtime" | Out-Null
+          New-Item -ItemType Directory -Force "$root\runtime\compat" | Out-Null
           Copy-Item src-tauri\target\release\ffconverter.exe "$root\FFConverter.exe"
           Copy-Item src-tauri\target\release\updater.exe "$root\updater.exe"
           Copy-Item runtime\ffmpeg.exe "$root\runtime\ffmpeg.exe"
           Copy-Item runtime\ffprobe.exe "$root\runtime\ffprobe.exe"
+          Copy-Item runtime\compat\ffmpeg.exe "$root\runtime\compat\ffmpeg.exe"
           Copy-Item runtime\FFmpeg-LICENSE.txt "$root\runtime\FFmpeg-LICENSE.txt"
           Compress-Archive -Path $root -DestinationPath dist\FFConverter-portable.zip -CompressionLevel Optimal
 
@@ -88,7 +96,13 @@ jobs:
           $tag = $env:GITHUB_REF_NAME
           $notes = [IO.File]::ReadAllText("$PWD\dist\release-notes.txt")
           $notes += "`n`n[Полный changelog](https://github.com/$env:GITHUB_REPOSITORY/blob/main/CHANGELOG.md)"
-          gh release create $tag dist\FFConverter-portable.zip dist\latest.json runtime\FFmpeg-LICENSE.txt --repo $env:GITHUB_REPOSITORY --title "FFConverter $tag" --notes $notes
+          gh release view $tag --repo $env:GITHUB_REPOSITORY --json id 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag dist\FFConverter-portable.zip dist\latest.json runtime\FFmpeg-LICENSE.txt --repo $env:GITHUB_REPOSITORY --clobber
+            gh release edit $tag --repo $env:GITHUB_REPOSITORY --title "FFConverter $tag" --notes $notes
+          } else {
+            gh release create $tag dist\FFConverter-portable.zip dist\latest.json runtime\FFmpeg-LICENSE.txt --repo $env:GITHUB_REPOSITORY --title "FFConverter $tag" --notes $notes
+          }
 
       - name: Verify release assets
         shell: pwsh

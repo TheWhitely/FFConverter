@@ -1,5 +1,11 @@
 use serde::{Deserialize, Serialize};
-use std::{path::{Path, PathBuf}, process::Command};
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+    sync::atomic::{AtomicBool, Ordering},
+};
+
+static USE_COMPAT_FFMPEG: AtomicBool = AtomicBool::new(false);
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -128,18 +134,35 @@ pub fn probe(path: &str) -> Result<MediaInfo, String> {
     })
 }
 
+fn compat_available() -> bool {
+    runtime_dir().join("compat").join("ffmpeg.exe").is_file()
+}
+
 fn hardware_encoder(name: &str) -> bool {
-    command("ffmpeg.exe")
+    let result = ffmpeg()
         .args(["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.1", "-frames:v", "1", "-c:v", name, "-f", "null", "-"])
-        .output().map(|output| output.status.success()).unwrap_or(false)
+        .output();
+    if let Ok(output) = &result {
+        let error = String::from_utf8_lossy(&output.stderr);
+        if !output.status.success() && compat_available()
+            && (error.contains("required nvenc API version") || error.contains("minimum required Nvidia driver"))
+        {
+            USE_COMPAT_FFMPEG.store(true, Ordering::Relaxed);
+        }
+    }
+    result.map(|output| output.status.success()).unwrap_or(false)
 }
 
 pub fn encoders() -> Result<EncoderSupport, String> {
     let output = command("ffmpeg.exe").args(["-hide_banner", "-encoders"]).output()
         .map_err(|e| format!("Не удалось запустить FFmpeg: {e}"))?;
     let text = String::from_utf8_lossy(&output.stdout);
+    let mut nvidia = text.contains("hevc_nvenc") && hardware_encoder("hevc_nvenc");
+    if !nvidia && USE_COMPAT_FFMPEG.load(Ordering::Relaxed) {
+        nvidia = hardware_encoder("hevc_nvenc");
+    }
     Ok(EncoderSupport {
-        nvidia: text.contains("hevc_nvenc") && hardware_encoder("hevc_nvenc"),
+        nvidia,
         nvidia_av1: text.contains("av1_nvenc") && hardware_encoder("av1_nvenc"),
         intel: text.contains("hevc_qsv") && hardware_encoder("hevc_qsv"),
         av1: text.contains("libsvtav1"),
@@ -148,5 +171,10 @@ pub fn encoders() -> Result<EncoderSupport, String> {
 }
 
 pub fn ffmpeg() -> Command {
-    command("ffmpeg.exe")
+    let forced = std::env::var_os("FFCONVERTER_FORCE_COMPAT").is_some();
+    if (forced || USE_COMPAT_FFMPEG.load(Ordering::Relaxed)) && compat_available() {
+        command("compat/ffmpeg.exe")
+    } else {
+        command("ffmpeg.exe")
+    }
 }
