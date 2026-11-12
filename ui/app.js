@@ -54,6 +54,7 @@
     loadToken: 0,
     settings: {},
     settingsReady: false,
+    encoderSupport: null,
     saveTimer: null,
     update: null,
     updateBusy: false,
@@ -610,6 +611,25 @@
     openWorkspace(file);
   }
 
+  function updatePresetLabels() {
+    $$('#preset-grid button').forEach((button) => {
+      const preset = presets[button.dataset.preset];
+      if (!preset) return;
+      const supported = !state.encoderSupport || (preset.codec === 'AV1' ? state.encoderSupport.nvidiaAv1 : state.encoderSupport.nvidia);
+      const encoder = supported ? preset.encoder : 'CPU';
+      $('small', button).textContent = `${preset.codec} · ${encoder} · ${encoder === 'CPU' ? 'CRF' : 'CQ'} ${preset.quality}`;
+    });
+  }
+
+  function updateEncoderOptions() {
+    if (!state.encoderSupport) return;
+    const nvidia = Array.from(elements.encoder.options).find((option) => option.value === 'NVIDIA NVENC');
+    const intel = Array.from(elements.encoder.options).find((option) => option.value === 'Intel Quick Sync');
+    if (nvidia) nvidia.disabled = !state.encoderSupport.nvidia || (elements.codec.value === 'AV1' && !state.encoderSupport.nvidiaAv1);
+    if (intel) intel.disabled = !state.encoderSupport.intel;
+    updatePresetLabels();
+  }
+
   function updateQuality() {
     const value = Number(elements.quality.value);
     const label = value <= 20 ? 'Очень высокое' : value <= 25 ? 'Высокое' : value <= 30 ? 'Среднее' : 'Компактное';
@@ -629,6 +649,7 @@
     if (!preset) return;
     $$('#preset-grid button').forEach((button) => button.classList.toggle('active', button.dataset.preset === name));
     elements.codec.value = preset.codec;
+    updateEncoderOptions();
     elements.encoder.value = preset.encoder;
     if (elements.encoder.selectedOptions[0]?.disabled) {
       elements.encoder.value = 'CPU';
@@ -1256,11 +1277,8 @@
     } catch {}
     checkForUpdates(false);
     try {
-      const support = await invoke('encoder_support');
-      const nvidia = Array.from(elements.encoder.options).find((option) => option.value === 'NVIDIA NVENC');
-      const intel = Array.from(elements.encoder.options).find((option) => option.value === 'Intel Quick Sync');
-      if (nvidia) nvidia.disabled = !support.nvidia;
-      if (intel) intel.disabled = !support.intel;
+      state.encoderSupport = await invoke('encoder_support');
+      updateEncoderOptions();
       $('#encoder-note').textContent = 'Если выбранное аппаратное кодирование недоступно, пресет автоматически использует CPU.';
       if (elements.encoder.selectedOptions[0]?.disabled) {
         elements.encoder.value = 'CPU';
@@ -1391,7 +1409,11 @@
   }));
   $$('#preset-grid button').forEach((button) => button.addEventListener('click', () => selectPreset(button.dataset.preset)));
   elements.quality.addEventListener('input', () => { updateQuality(); markCustomPreset(); });
-  elements.codec.addEventListener('change', () => { updateQuality(); markCustomPreset(); });
+  elements.codec.addEventListener('change', () => {
+    updateEncoderOptions();
+    if (elements.encoder.selectedOptions[0]?.disabled) elements.encoder.value = 'CPU';
+    updateQuality(); markCustomPreset();
+  });
   elements.encoder.addEventListener('change', () => { updateQuality(); markCustomPreset(); });
   elements.container.addEventListener('change', () => {
     if (elements.container.value === 'WebM') {

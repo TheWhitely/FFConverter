@@ -2,6 +2,12 @@
 
 Здесь перечислены изменения каждой версии FFConverter.
 
+## [1.0.3.4] - 2026-11-12
+
+### Исправлено
+
+- AV1 NVENC проверяется отдельно от HEVC NVENC; на неподдерживаемых видеокартах пресет «Качество» использует CPU и показывает CRF вместо CQ.
+
 ## [1.0.3.3] - 2026-11-12
 
 ### Добавлено
@@ -90,6 +96,7 @@
 - Автоматическая проверка и скачивание обновлений с установкой после подтверждения.
 - Публикация portable ZIP через GitHub Actions.
 
+[1.0.3.4]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3.3...v1.0.3.4
 [1.0.3.3]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3.2...v1.0.3.3
 [1.0.3.2]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3.1...v1.0.3.2
 [1.0.3.1]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3...v1.0.3.1
