@@ -2,7 +2,7 @@
 
 Здесь перечислены изменения каждой версии FFConverter.
 
-## [Unreleased]
+## [1.0.3.3] - 2026-11-12
 
 ### Исправлено
 
@@ -86,6 +86,7 @@
 - Автоматическая проверка и скачивание обновлений с установкой после подтверждения.
 - Публикация portable ZIP через GitHub Actions.
 
+[1.0.3.3]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3.2...v1.0.3.3
 [1.0.3.2]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3.1...v1.0.3.2
 [1.0.3.1]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3...v1.0.3.1
 [1.0.3]: https://github.com/TheWhitely/FFConverter/compare/v1.0.2...v1.0.3
