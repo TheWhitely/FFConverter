@@ -2,6 +2,12 @@
 
 Здесь перечислены изменения каждой версии FFConverter.
 
+## [1.0.3.2] - 2026-11-12
+
+### Исправлено
+
+- Экспорт начинается сразу с выбранной позиции без декодирования предыдущей части ролика; прогресс сразу отражает выбранный фрагмент.
+
 ## [1.0.3.1] - 2026-11-09
 
 ### Изменено
@@ -73,6 +79,7 @@
 - Автоматическая проверка и скачивание обновлений с установкой после подтверждения.
 - Публикация portable ZIP через GitHub Actions.
 
+[1.0.3.2]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3.1...v1.0.3.2
 [1.0.3.1]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3...v1.0.3.1
 [1.0.3]: https://github.com/TheWhitely/FFConverter/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/TheWhitely/FFConverter/compare/v1.0.1...v1.0.2

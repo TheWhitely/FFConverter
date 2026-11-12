@@ -981,7 +981,6 @@
       kind: state.exportKind,
       start: singleImage ? state.position : state.start,
       end: singleImage ? state.position + .001 : state.end,
-      fast: options.copyVideo,
       copyVideo: options.copyVideo,
       codec: options.codec,
       encoder: options.encoder,

@@ -43,7 +43,6 @@ pub struct ExportSettings {
     pub kind: String,
     pub start: f64,
     pub end: f64,
-    pub fast: bool,
     pub copy_video: bool,
     pub codec: String,
     pub encoder: String,
@@ -137,8 +136,8 @@ fn audio_arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), 
     }
     let mut args = vec![
         "-hide_banner".into(), "-y".into(),
-        "-i".into(), settings.input.clone(),
         "-ss".into(), format!("{:.6}", settings.start),
+        "-i".into(), settings.input.clone(),
         "-t".into(), format!("{:.6}", (settings.end - settings.start).max(0.001)),
     ];
     args.push("-vn".into());
@@ -195,13 +194,8 @@ fn arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), String
     if let Some(parent) = output.parent() { std::fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
     let duration = settings.end - settings.start;
     let mut args = vec!["-hide_banner".into(), "-y".into()];
-    if settings.fast && settings.kind == "video" {
-        args.extend(["-ss".into(), format!("{:.6}", settings.start)]);
-    }
+    args.extend(["-ss".into(), format!("{:.6}", settings.start)]);
     args.extend(["-i".into(), settings.input.clone()]);
-    if !settings.fast || settings.kind != "video" {
-        args.extend(["-ss".into(), format!("{:.6}", settings.start)]);
-    }
     if !settings.single_frame || settings.kind == "video" || settings.kind == "gif" {
         args.extend(["-t".into(), format!("{:.6}", duration.max(0.001))]);
     }

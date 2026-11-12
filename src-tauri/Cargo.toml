@@ -7,7 +7,7 @@ edition = "2021"
 default-run = "ffconverter"
 
 [package.metadata]
-appVersion = "1.0.3.1"
+appVersion = "1.0.3.2"
 
 [lib]
 name = "ffconverter_lib"
