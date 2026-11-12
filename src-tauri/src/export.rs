@@ -173,6 +173,17 @@ fn audio_arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), 
     Ok((args, output))
 }
 
+fn audio_copy_supported(codec: &str, extension: &str) -> bool {
+    let codec = codec.to_uppercase();
+    if extension == "webm" {
+        return matches!(codec.as_str(), "OPUS" | "VORBIS");
+    }
+    if ["mp4", "m4v"].contains(&extension) && codec.starts_with("PCM_") {
+        return false;
+    }
+    true
+}
+
 fn arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), String> {
     if !Path::new(&settings.input).is_file() { return Err("Исходный файл не найден.".into()); }
     if settings.end <= settings.start && !(settings.single_frame && settings.kind != "video") {
@@ -226,12 +237,18 @@ fn arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), String
             let filters = video_filters(settings, false);
             if !filters.is_empty() { args.extend(["-vf".into(), filters.join(",")]); }
         }
+        let extension = output.extension().unwrap_or_default().to_string_lossy().to_lowercase();
         if !enabled.is_empty() {
+            let source_audio = crate::media::probe(&settings.input)?.audio;
             let needs_audio_processing = enabled.iter().any(|a| (a.volume - 1.0).abs() > 0.001);
-            if settings.audio_codec == "original" && !needs_audio_processing {
+            let can_copy = settings.audio_codec == "original" && !needs_audio_processing && enabled.iter().all(|track| {
+                source_audio.iter().find(|source| source.index == track.index)
+                    .map(|source| audio_copy_supported(&source.codec, &extension)).unwrap_or(false)
+            });
+            if can_copy {
                 args.extend(["-c:a".into(), "copy".into()]);
             } else {
-                let codec = if settings.audio_codec == "original" { "aac" } else { settings.audio_codec.as_str() };
+                let codec = if settings.audio_codec == "original" || extension == "webm" { if extension == "webm" { "opus" } else { "aac" } } else { settings.audio_codec.as_str() };
                 let ffmpeg_codec = if codec == "opus" { "libopus" } else { codec };
                 args.extend(["-c:a".into(), ffmpeg_codec.into()]);
                 if codec != "flac" { args.extend(["-b:a".into(), format!("{}k", settings.audio_bitrate)]); }
@@ -239,8 +256,13 @@ fn arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), String
                     args.extend([format!("-filter:a:{output_index}"), format!("volume={:.4}", track.volume)]);
                 }
             }
+            for (output_index, track) in enabled.iter().enumerate() {
+                if let Some(source) = source_audio.iter().find(|source| source.index == track.index) {
+                    let option = format!("-metadata:s:a:{output_index}");
+                    args.extend([option.clone(), format!("title={}", source.name), option, format!("name={}", source.name)]);
+                }
+            }
         }
-        let extension = output.extension().unwrap_or_default().to_string_lossy().to_lowercase();
         if extension == "mp4" || extension == "mov" { args.extend(["-movflags".into(), "+faststart".into()]); }
     } else if settings.kind == "gif" {
         let mut filters = video_filters(settings, true);
