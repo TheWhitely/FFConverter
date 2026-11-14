@@ -37,6 +37,24 @@ pub struct AudioSetting {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct Effect {
+    #[serde(rename = "id")]
+    pub _id: String,
+    pub kind: String,
+    pub start: f64,
+    pub end: f64,
+    pub enabled: bool,
+    pub intensity: Option<f64>,
+    pub rate: Option<f64>,
+    pub brightness: Option<f64>,
+    pub contrast: Option<f64>,
+    pub saturation: Option<f64>,
+    pub duration: Option<f64>,
+    pub area: Option<Crop>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExportSettings {
     pub input: String,
     pub output: String,
@@ -59,6 +77,8 @@ pub struct ExportSettings {
     pub audio_bitrate: u32,
     pub keep_metadata: bool,
     pub keep_subtitles: bool,
+    #[serde(default)]
+    pub effects: Vec<Effect>,
 }
 
 #[derive(Clone, Serialize)]
@@ -95,6 +115,120 @@ fn video_filters(settings: &ExportSettings, image: bool) -> Vec<String> {
         filters.push(format!("scale={}:{}:flags=lanczos", even(settings.width as f64), even(settings.height as f64)));
     }
     filters
+}
+
+fn effect_bounds(settings: &ExportSettings, effect: &Effect) -> Option<(f64, f64)> {
+    if !effect.enabled || !effect.start.is_finite() || !effect.end.is_finite() {
+        return None;
+    }
+    let duration = (settings.end - settings.start).max(0.0);
+    let start = effect.start.clamp(0.0, duration);
+    let end = effect.end.clamp(0.0, duration);
+    (end > start).then_some((start, end))
+}
+
+fn speed_segments(settings: &ExportSettings) -> Vec<(f64, f64, f64)> {
+    let duration = (settings.end - settings.start).max(0.001);
+    let mut effects = settings.effects.iter().filter_map(|effect| {
+        let (start, end) = effect_bounds(settings, effect)?;
+        let rate = effect.rate.unwrap_or(1.0).clamp(0.25, 4.0);
+        (effect.kind == "speed" && rate > 0.0).then_some((start, end, rate))
+    }).collect::<Vec<_>>();
+    effects.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut segments = Vec::new();
+    let mut cursor = 0.0;
+    for (start, end, rate) in effects {
+        let start = start.max(cursor);
+        if start > cursor { segments.push((cursor, start, 1.0)); }
+        if end > start { segments.push((start, end, rate)); }
+        cursor = cursor.max(end);
+    }
+    if cursor < duration { segments.push((cursor, duration, 1.0)); }
+    segments
+}
+
+fn expected_duration(settings: &ExportSettings) -> f64 {
+    speed_segments(settings).into_iter().map(|(start, end, rate)| (end - start) / rate).sum::<f64>().max(0.001)
+}
+
+fn effect_graph(settings: &ExportSettings, enabled_audio: &[&AudioSetting]) -> Option<String> {
+    if settings.kind != "video" || settings.effects.is_empty() {
+        return None;
+    }
+    let mut graph = Vec::new();
+    let base = video_filters(settings, false);
+    graph.push(format!("[0:v:0]{},setpts=PTS-STARTPTS[v0]", if base.is_empty() { "null".into() } else { base.join(",") }));
+    let mut current = 0;
+    for effect in settings.effects.iter().filter(|effect| effect.kind != "speed") {
+        let Some((start, end)) = effect_bounds(settings, effect) else { continue; };
+        let next = current + 1;
+        match effect.kind.as_str() {
+            "blur" | "color" => {
+                let processing = if effect.kind == "blur" {
+                    let sigma = effect.intensity.unwrap_or(12.0).clamp(0.0, 60.0);
+                    if let Some(area) = &effect.area {
+                        let x = (area.x.clamp(0.0, 0.99) * settings.width as f64).round().max(0.0) as u32;
+                        let y = (area.y.clamp(0.0, 0.99) * settings.height as f64).round().max(0.0) as u32;
+                        let width = even(area.width.clamp(0.01, 1.0) * settings.width as f64).min(settings.width.saturating_sub(x)).max(2);
+                        let height = even(area.height.clamp(0.01, 1.0) * settings.height as f64).min(settings.height.saturating_sub(y)).max(2);
+                        format!("crop={width}:{height}:{x}:{y},gblur=sigma={sigma:.3}")
+                    } else {
+                        format!("gblur=sigma={sigma:.3}")
+                    }
+                } else {
+                    format!("eq=brightness={:.4}:contrast={:.4}:saturation={:.4}",
+                        effect.brightness.unwrap_or(0.0).clamp(-0.5, 0.5),
+                        effect.contrast.unwrap_or(1.0).clamp(0.5, 1.5),
+                        effect.saturation.unwrap_or(1.0).clamp(0.0, 2.0))
+                };
+                let position = if effect.kind == "blur" {
+                    effect.area.as_ref().map(|area| format!("x={}:y={}:",
+                        (area.x.clamp(0.0, 0.99) * settings.width as f64).round().max(0.0) as u32,
+                        (area.y.clamp(0.0, 0.99) * settings.height as f64).round().max(0.0) as u32)).unwrap_or_default()
+                } else {
+                    String::new()
+                };
+                graph.push(format!("[v{current}]split=2[vm{next}][vt{next}]"));
+                graph.push(format!("[vt{next}]trim=start={start:.6}:end={end:.6},setpts=PTS-STARTPTS,{processing}[ve{next}]"));
+                graph.push(format!("[vm{next}][ve{next}]overlay={position}eof_action=pass:enable='between(t,{start:.6},{end:.6})'[v{next}]"));
+            }
+            "fade" => {
+                let length = effect.duration.unwrap_or(1.0).clamp(0.05, (end - start) / 2.0);
+                graph.push(format!("[v{current}]fade=t=in:st={start:.6}:d={length:.6},fade=t=out:st={:.6}:d={length:.6}[v{next}]", (end - length).max(start)));
+            }
+            _ => continue,
+        }
+        current = next;
+    }
+    let segments = speed_segments(settings);
+    if settings.effects.iter().any(|effect| effect.kind == "speed" && effect_bounds(settings, effect).is_some()) {
+        let segments = segments.into_iter().filter(|(from, to, _)| to - from > 0.000001).collect::<Vec<_>>();
+        let inputs = (0..segments.len()).map(|index| format!("[vs{index}src]")).collect::<String>();
+        graph.push(format!("[v{current}]split={}{inputs}", segments.len()));
+        let mut output_start = 0.0;
+        let mut labels = String::new();
+        for (index, (from, to, segment_rate)) in segments.iter().enumerate() {
+            graph.push(format!("[vs{index}src]trim=start={from:.6}:end={to:.6},setpts=(PTS-STARTPTS)/{segment_rate:.6}+{output_start:.6}[vs{index}]"));
+            labels.push_str(&format!("[vs{index}]"));
+            output_start += (to - from) / segment_rate;
+        }
+        graph.push(format!("{labels}concat=n={}:v=1:a=0[vout]", segments.len()));
+        for (index, track) in enabled_audio.iter().enumerate() {
+            let inputs = (0..segments.len()).map(|segment| format!("[a{index}s{segment}src]")).collect::<String>();
+            graph.push(format!("[0:{}]asetpts=PTS-STARTPTS,asplit={}{inputs}", track.index, segments.len()));
+            let mut output_start = 0.0;
+            let mut labels = String::new();
+            for (segment, (from, to, segment_rate)) in segments.iter().enumerate() {
+                graph.push(format!("[a{index}s{segment}src]atrim=start={from:.6}:end={to:.6},asetpts=PTS-STARTPTS,atempo={segment_rate:.6},asetpts=PTS-STARTPTS+{output_start:.6}[a{index}s{segment}]"));
+                labels.push_str(&format!("[a{index}s{segment}]"));
+                output_start += (to - from) / segment_rate;
+            }
+            graph.push(format!("{labels}concat=n={}:v=0:a=1[ac{index}];[ac{index}]volume={:.4}[a{index}]", segments.len(), track.volume));
+        }
+    } else {
+        graph.push(format!("[v{current}]null[vout]"));
+    }
+    Some(graph.join(";"))
 }
 
 fn video_encoder(settings: &ExportSettings) -> Result<Vec<String>, String> {
@@ -206,16 +340,24 @@ fn arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), String
     let duration = settings.end - settings.start;
     let mut args = vec!["-hide_banner".into(), "-y".into()];
     args.extend(["-ss".into(), format!("{:.6}", settings.start)]);
-    args.extend(["-i".into(), settings.input.clone()]);
     if !settings.single_frame || settings.kind == "video" || settings.kind == "gif" {
         args.extend(["-t".into(), format!("{:.6}", duration.max(0.001))]);
     }
-    if settings.kind != "gif" {
-        args.extend(["-map".into(), "0:v:0".into()]);
-    }
+    args.extend(["-i".into(), settings.input.clone()]);
     if settings.kind == "video" {
         let enabled: Vec<_> = settings.audio.iter().filter(|a| a.enabled).collect();
-        for track in &enabled { args.extend(["-map".into(), format!("0:{}", track.index)]); }
+        let graph = effect_graph(settings, &enabled);
+        let has_speed = settings.effects.iter().any(|effect| effect.kind == "speed" && effect_bounds(settings, effect).is_some());
+        if let Some(graph) = &graph {
+            args.extend(["-filter_complex".into(), graph.clone(), "-map".into(), "[vout]".into()]);
+        } else {
+            args.extend(["-map".into(), "0:v:0".into()]);
+        }
+        if has_speed {
+            for index in 0..enabled.len() { args.extend(["-map".into(), format!("[a{index}]")]); }
+        } else {
+            for track in &enabled { args.extend(["-map".into(), format!("0:{}", track.index)]); }
+        }
         if enabled.is_empty() { args.push("-an".into()); }
         if settings.keep_subtitles && !settings.copy_video {
             let extension = output.extension().unwrap_or_default().to_string_lossy().to_lowercase();
@@ -228,20 +370,25 @@ fn arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), String
         }
         args.extend(["-map_metadata".into(), if settings.keep_metadata { "0".into() } else { "-1".into() }]);
         if settings.copy_video {
+            if !settings.effects.is_empty() {
+                return Err("Эффекты требуют перекодирования видео.".into());
+            }
             if settings.crop.is_some() || settings.width != settings.original_width || settings.height != settings.original_height {
                 return Err("Копирование без перекодирования несовместимо с кадрированием и изменением разрешения.".into());
             }
             args.extend(["-c:v".into(), "copy".into()]);
         } else {
             args.extend(video_encoder(settings)?);
-            let filters = video_filters(settings, false);
-            if !filters.is_empty() { args.extend(["-vf".into(), filters.join(",")]); }
+            if graph.is_none() {
+                let filters = video_filters(settings, false);
+                if !filters.is_empty() { args.extend(["-vf".into(), filters.join(",")]); }
+            }
         }
         let extension = output.extension().unwrap_or_default().to_string_lossy().to_lowercase();
         if !enabled.is_empty() {
             let source_audio = crate::media::probe(&settings.input)?.audio;
             let needs_audio_processing = enabled.iter().any(|a| (a.volume - 1.0).abs() > 0.001);
-            let can_copy = settings.audio_codec == "original" && !needs_audio_processing && enabled.iter().all(|track| {
+            let can_copy = settings.audio_codec == "original" && !needs_audio_processing && !has_speed && enabled.iter().all(|track| {
                 source_audio.iter().find(|source| source.index == track.index)
                     .map(|source| audio_copy_supported(&source.codec, &extension)).unwrap_or(false)
             });
@@ -252,8 +399,10 @@ fn arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), String
                 let ffmpeg_codec = if codec == "opus" { "libopus" } else { codec };
                 args.extend(["-c:a".into(), ffmpeg_codec.into()]);
                 if codec != "flac" { args.extend(["-b:a".into(), format!("{}k", settings.audio_bitrate)]); }
-                for (output_index, track) in enabled.iter().enumerate() {
-                    args.extend([format!("-filter:a:{output_index}"), format!("volume={:.4}", track.volume)]);
+                if !has_speed {
+                    for (output_index, track) in enabled.iter().enumerate() {
+                        args.extend([format!("-filter:a:{output_index}"), format!("volume={:.4}", track.volume)]);
+                    }
                 }
             }
             for (output_index, track) in enabled.iter().enumerate() {
@@ -270,10 +419,11 @@ fn arguments(settings: &ExportSettings) -> Result<(Vec<String>, PathBuf), String
         let graph = format!("[0:v]{}[base];[base]split[a][b];[a]palettegen=max_colors=256[p];[b][p]paletteuse=dither=sierra2_4a", if filters.is_empty() { "null".into() } else { format!("{}", filters.join(",")) });
         args.extend(["-filter_complex".into(), graph, "-loop".into(), "0".into()]);
     } else {
+        args.extend(["-map".into(), "0:v:0".into()]);
         let mut filters = video_filters(settings, true);
         if !settings.single_frame { filters.push(format!("fps={}", settings.fps)); }
         if !filters.is_empty() { args.extend(["-vf".into(), filters.join(",")]); }
-        if settings.single_frame { args.extend(["-frames:v".into(), "1".into()]); }
+        if settings.single_frame { args.extend(["-frames:v".into(), "1".into(), "-update".into(), "1".into()]); }
         if settings.kind == "jpg" { args.extend(["-q:v".into(), "2".into()]); }
     }
     args.extend(["-progress".into(), "pipe:1".into(), "-nostats".into()]);
@@ -296,7 +446,7 @@ pub fn start_export(app: AppHandle, jobs: State<'_, Jobs>, settings: ExportSetti
     };
     let child = Arc::new(Mutex::new(child));
     jobs.processes.lock().unwrap().insert(id, child.clone());
-    let duration = (settings.end - settings.start).max(0.001);
+    let duration = expected_duration(&settings);
     let progress_app = app.clone();
     thread::spawn(move || {
         for line in BufReader::new(stdout).lines().map_while(Result::ok) {

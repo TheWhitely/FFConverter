@@ -1,13 +1,13 @@
 [package]
 name = "ffconverter"
-version = "1.0.3"
+version = "2.0.0"
 description = "Portable video converter powered by FFmpeg"
 authors = ["Whitely"]
 edition = "2021"
 default-run = "ffconverter"
 
 [package.metadata]
-appVersion = "1.0.3.4"
+appVersion = "2.0.0"
 
 [lib]
 name = "ffconverter_lib"
