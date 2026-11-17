@@ -204,13 +204,6 @@
       summary.addEventListener('click', function (event) {
         event.preventDefault();
         var closing = details._monoAnimation ? details._monoClosing : details.open;
-        if (!closing && !details.hasAttribute('data-effect')) {
-          details.parentElement.querySelectorAll(':scope > details.m-details').forEach(function (sibling) {
-            if (sibling === details) return;
-            var siblingClosing = sibling._monoAnimation ? sibling._monoClosing : !sibling.open;
-            if (!siblingClosing) animateDetails(sibling, true);
-          });
-        }
         animateDetails(details, closing);
       });
     });

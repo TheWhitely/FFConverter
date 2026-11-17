@@ -89,7 +89,7 @@ button, a, input, select, summary { -webkit-tap-highlight-color: transparent; }
 .effect-section > summary > .effect-summary > .m-icon { transform: none; }
 .effect-section[open] > summary > .effect-summary > .m-icon { color: var(--m-accent); }
 .effect-content { gap: 11px; }
-.effect-section[data-effect][open] { border-color: color-mix(in srgb, var(--m-accent) 55%, var(--m-border)); }
+.effect-section[open] { border-color: color-mix(in srgb, var(--m-accent) 55%, var(--m-border)); }
 .preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .preset-grid .m-btn { position: relative; min-width: 0; overflow: hidden; white-space: normal; font-size: 10px; }
 .preset-grid .m-btn small { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -159,7 +159,7 @@ button.track-label[aria-pressed="false"] { opacity: .4; }
 .timeline-canvas { min-height: 188px; }
 .speed-badge:empty { display: none; }
 .effect-clip.is-inactive { border-style: dashed; opacity: .5; }
-.crop-overlay { position: absolute; z-index: 10; inset: 0; touch-action: none; }
+.crop-overlay { position: absolute; z-index: 30; inset: 0; touch-action: none; }
 .crop-frame { position: absolute; border: 1px solid var(--m-accent); box-shadow: 0 0 0 999px rgb(0 0 0 / 48%); cursor: move; touch-action: none; }
 .crop-grid { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, transparent 33.1%, rgb(255 255 255 / 22%) 33.3%, transparent 33.5%, transparent 66.4%, rgb(255 255 255 / 22%) 66.6%, transparent 66.8%), linear-gradient(0deg, transparent 33.1%, rgb(255 255 255 / 22%) 33.3%, transparent 33.5%, transparent 66.4%, rgb(255 255 255 / 22%) 66.6%, transparent 66.8%); }
 .crop-handle { position: absolute; z-index: 2; width: 16px; height: 16px; border-color: white; border-style: solid; }
@@ -173,6 +173,13 @@ button.track-label[aria-pressed="false"] { opacity: .4; }
 .blur-handle { position: absolute; z-index: 4; width: 20px; height: 20px; border-color: #fff; border-style: solid; background: transparent; filter: drop-shadow(0 0 2px rgb(0 0 0 / 85%)); pointer-events: auto; touch-action: none; }
 .bh-tl { left: 0; top: 0; border-width: 3px 0 0 3px; cursor: nwse-resize; }.bh-tr { right: 0; top: 0; border-width: 3px 3px 0 0; cursor: nesw-resize; }.bh-bl { left: 0; bottom: 0; border-width: 0 0 3px 3px; cursor: nesw-resize; }.bh-br { right: 0; bottom: 0; border-width: 0 3px 3px 0; cursor: nwse-resize; }
 .blur-label { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 4px 7px; background: var(--m-surface); color: var(--m-accent); font: 8px var(--m-mono); white-space: nowrap; pointer-events: none; }
+.blur-region.is-preview { pointer-events: none; }
+.blur-region.is-preview .blur-region-frame { border-color: transparent; background: transparent; pointer-events: none; cursor: default; }
+.blur-region.is-preview .blur-handle, .blur-region.is-preview .blur-label { display: none; }
+.blur-region > .blur-region-frame { z-index: 2; }
+.blur-region > .blur-label { z-index: 3; }
+.blur-region-preview { position: absolute; z-index: 1; inset: 0; pointer-events: none; }
+.blur-region-preview .blur-region-frame { border-color: transparent; background: transparent; pointer-events: none; cursor: default; }
 .app-modal { position: fixed; z-index: 200; inset: var(--topbar-height) 0 0; padding: 24px; display: grid; place-items: center; background: var(--m-overlay); }
 .modal-card { position: relative; width: min(440px, 100%); max-height: calc(100dvh - var(--topbar-height) - 48px); padding: 24px; overflow-y: auto; border: 1px solid var(--m-border-strong); border-radius: var(--m-radius-xl); background: var(--m-surface); box-shadow: var(--m-shadow); }
 .modal-card h2 { margin: 5px 0 0; font-size: 19px; font-weight: 550; }
@@ -209,10 +216,8 @@ kbd { padding: 3px 6px; border: 1px solid var(--m-border-strong); border-radius:
 .custom-scroll-wrap.inspector-wrap { overflow: hidden; }
 .custom-scroll-thumb { background: var(--m-muted); }
 .custom-scroll-thumb:hover { background: var(--m-accent); }
-.effect-clip { justify-content: flex-start; padding-right: 30px; }
+.effect-clip { justify-content: flex-start; padding-right: 18px; }
 .effect-clip.is-selected { border-color: var(--m-text); box-shadow: 0 0 0 1px var(--m-accent); }
-.effect-delete { position: absolute; z-index: 6; top: 0; right: 10px; bottom: 0; width: 15px; padding: 0; border: 0; display: none; background: transparent; color: var(--m-accent-contrast); font-size: 13px; cursor: pointer; }
-.effect-clip:hover .effect-delete, .effect-clip.is-selected .effect-delete { display: block; }
 .effect-clip > b { margin-right: 8px; }
 .preview-effect-rate { margin-left: 8px; color: var(--m-accent); text-transform: none; }
 #add-vfx-track { min-height: 26px; padding-inline: 8px; font-size: 9px; }

@@ -19,11 +19,11 @@
   const state = {
     duration: 41, position: 0, start: 0, end: 41, isDemo: true, playing: false, demoFrame: null, lastDemoTick: 0,
     cropRatio: 'free', crop: null, cropVisible: false, objectUrl: null, media: null, originalWidth: 1920, originalHeight: 1080,
-    audio: [], audioPlayers: [], audioContext: null, masterMuted: false, exportKind: 'video', activeJob: null, exportOutput: '',
+    audio: [], audioPlayers: [], audioContext: null, masterMuted: false, exportKind: 'video', activeJob: null, exportOutput: '', restoreExportModal: false,
     loadToken: 0, settings: {}, settingsReady: false, encoderSupport: null, saveTimer: null, update: null, updateBusy: false,
     updatePromptShown: false, scrubbing: false, resumeAfterScrub: false, previewSpeed: 1, snapping: true,
-    effects: [], vfxTracks: 2, selectedEffect: null, nextEffectId: 1,
-    blurRegion: { x: .32, y: .24, width: .36, height: .46 }, blurVisible: false, blurAnimation: null, lastBlurFrame: 0,
+    effects: [], deletedEffects: [], vfxTracks: 2, selectedEffect: null, nextEffectId: 1, blurEffectId: null,
+    blurRegion: { x: .32, y: .24, width: .36, height: .46 }, blurVisible: false, blurAnimation: null, blurVideoFrame: null,
     colorHsv: { h: 340, s: .65, v: .98 }
   };
   const effectDefinitions = {
@@ -193,7 +193,7 @@
         const definition = effectDefinitions[effect.kind], clip = document.createElement('div');
         clip.className = 'effect-clip'; clip.dataset.effectId = effect.id; clip.tabIndex = 0;
         clip.setAttribute('role', 'group'); clip.setAttribute('aria-label', `${definition.name}: перетащить, растянуть или перенести на другую дорожку`);
-        clip.innerHTML = `${icon(definition.icon)}<span>${definition.name}</span><b>${effectValue(effect)}</b><button class="effect-delete" data-effect-delete type="button" aria-label="Удалить эффект">×</button><button class="effect-resize start" data-effect-handle="start" type="button" aria-label="Начало эффекта"></button><button class="effect-resize end" data-effect-handle="end" type="button" aria-label="Конец эффекта"></button>`;
+        clip.innerHTML = `${icon(definition.icon)}<span>${definition.name}</span><b>${effectValue(effect)}</b><button class="effect-resize start" data-effect-handle="start" type="button" aria-label="Начало эффекта"></button><button class="effect-resize end" data-effect-handle="end" type="button" aria-label="Конец эффекта"></button>`;
         row.append(clip);
       });
       rows.append(row);
@@ -252,6 +252,7 @@
     state.selectedEffect = id;
     if (openPanel) { $('#effects-tab').click(); $(`details[data-effect="${effect.kind}"]`).open = true; }
     if (effect.kind === 'blur') {
+      state.blurEffectId = effect.id;
       if (state.position < effect.start || state.position >= effect.end) seek(effect.start);
       elements.video.pause(); stopDemoPlayback(); setPlaying(false);
       $('#blur-range').value = effect.intensity; state.blurRegion = effect.area ? { ...effect.area } : { x: .32, y: .24, width: .36, height: .46 };
@@ -269,9 +270,20 @@
     updateEffectClips();
   }
   function removeEffect(id) {
-    state.effects = state.effects.filter((effect) => effect.id !== id);
-    if (state.selectedEffect === id) { state.selectedEffect = null; state.blurVisible = false; $('#blur-region').hidden = true; }
+    const effect = state.effects.find((item) => item.id === id); if (!effect) return;
+    state.deletedEffects.push({ ...effect, area: effect.area ? { ...effect.area } : null });
+    state.effects = state.effects.filter((item) => item.id !== id);
+    if (state.selectedEffect === id) state.selectedEffect = null;
+    if (state.blurEffectId === id) { state.blurEffectId = null; state.blurVisible = false; $('#blur-region').hidden = true; }
     renderEffects(); updateOutputName();
+  }
+  function undoRemoveEffect() {
+    const effect = state.deletedEffects.pop(); if (!effect) return;
+    state.vfxTracks = Math.max(state.vfxTracks, effect.track + 1);
+    if (hasOverlap(effect.kind, effect.track, effect.start, effect.end, effect.id)) {
+      state.deletedEffects.push(effect); toast('Не удалось вернуть эффект: прежнее место занято.', 'warning'); return;
+    }
+    state.effects.push(effect); renderEffects(); selectEffect(effect.id); updateOutputName();
   }
   function updateEffectFromControls(kind) {
     const effect = selectedEffect(kind);
@@ -297,13 +309,16 @@
     if (fullBlur) filters.push(`blur(${Math.min(12, fullBlur * .12)}px)`);
     if (color) filters.push(`brightness(${1 + color.brightness})`, `contrast(${color.contrast})`, `saturate(${color.saturation})`);
     elements.video.style.filter = filters.join(' ');
-    const selectedBlur = selectedEffect('blur'), visible = Boolean(selectedBlur?.area && blurs.includes(selectedBlur));
-    $('#blur-region').hidden = !visible;
+    const regionalBlurs = blurs.filter((effect) => effect.area);
+    const primaryBlur = regionalBlurs.find((effect) => effect.id === state.blurEffectId) || regionalBlurs[0];
+    const visible = regionalBlurs.length > 0;
+    const region = $('#blur-region'); region.hidden = !visible;
+    region.classList.toggle('is-preview', visible && selectedEffect('blur')?.id !== primaryBlur?.id);
     if (visible) {
-      renderBlurRegion();
-      if (state.playing && !state.blurAnimation) state.blurAnimation = requestAnimationFrame(tickBlurPreview);
-    } else if (state.blurAnimation) {
-      cancelAnimationFrame(state.blurAnimation); state.blurAnimation = null;
+      if (!state.playing) renderActiveBlurRegions();
+      queueBlurPreviewFrame();
+    } else {
+      stopBlurPreviewUpdates();
     }
     syncEffectPlaybackRate();
   }
@@ -351,9 +366,10 @@
     if (state.playing) { if (state.isDemo) stopDemoPlayback(); else elements.video.pause(); setPlaying(false); return; }
     if (!state.isDemo && !elements.video.src) return;
     if (state.position >= state.end || state.position < state.start) seek(state.start);
-    setPlaying(true);
-    if (state.isDemo) { state.demoFrame = requestAnimationFrame(tickDemo); return; }
+    if (state.isDemo) { setPlaying(true); state.demoFrame = requestAnimationFrame(tickDemo); return; }
     try {
+      if (elements.video.seeking) await new Promise((resolve) => elements.video.addEventListener('seeked', resolve, { once: true }));
+      setPlaying(true);
       if (state.audioContext) await state.audioContext.resume();
       syncEffectPlaybackRate();
       await elements.video.play(); syncAudioPlayback();
@@ -418,7 +434,7 @@
     for (let index = 0; index < 12; index++) { const span = document.createElement('span'); span.dataset.index = index; container.append(span); }
   }
   function resetEffects() {
-    state.effects = []; state.vfxTracks = 2; state.selectedEffect = null; state.blurVisible = false;
+    state.effects = []; state.deletedEffects = []; state.vfxTracks = 2; state.selectedEffect = null; state.blurEffectId = null; state.blurVisible = false;
     $$('details[data-effect]').forEach((details) => { details.open = false; });
     $('#blur-range').value = 24; $('#brightness-range').value = 0; $('#contrast-range').value = 100; $('#saturation-range').value = 100;
     $$('#blur-range, #brightness-range, #contrast-range, #saturation-range').forEach(setRangeFill);
@@ -568,8 +584,16 @@
     catch (error) { $('#update-status').textContent = 'Не удалось проверить обновления. Повторите попытку позже.'; $('#update-check').disabled = false; if (manual) toast(String(error), 'error', { duration: 6000 }); }
     finally { state.updateBusy = false; if (!state.update?.downloading) $('#update-check').disabled = false; }
   }
-  function openModal(modal) { modal.hidden = false; $('[data-close-modal]', modal)?.focus(); }
-  function closeModals() { elements.exportModal.hidden = true; elements.helpModal.hidden = true; elements.updateModal.hidden = true; state.updatePromptShown = false; }
+  function openModal(modal) {
+    if (modal !== elements.exportModal && !elements.exportModal.hidden) state.restoreExportModal = true;
+    modal.hidden = false; $('[data-close-modal]', modal)?.focus();
+  }
+  function closeModals() {
+    const restoreExport = state.restoreExportModal;
+    elements.exportModal.hidden = !restoreExport; elements.helpModal.hidden = true; elements.updateModal.hidden = true;
+    state.restoreExportModal = false; state.updatePromptShown = false;
+    if (restoreExport) $('[data-close-modal]', elements.exportModal)?.focus();
+  }
   function resetTrim() { state.start = 0; state.end = state.duration; seek(0); updateTimeline(); updateOutputName(); }
 
   function videoRect() {
@@ -830,7 +854,10 @@
     ['compression', 'conversion', 'resolution', 'crop', 'frames'].forEach((name, index) => {
       const section = $$('#video-panel > .setting-section')[index]; section.id = `${name}-section`;
       section.addEventListener('toggle', () => {
-        if (name === 'crop') { elements.cropOverlay.hidden = !section.open || !state.cropVisible || !state.crop; if (section.open && state.crop) requestAnimationFrame(renderCrop); }
+        if (name === 'crop') {
+          if (section.open && state.selectedEffect) { state.selectedEffect = null; updateEffectClips(); }
+          elements.cropOverlay.hidden = !section.open || !state.cropVisible || !state.crop; if (section.open && state.crop) requestAnimationFrame(renderCrop);
+        }
         if (['crop', 'resolution'].includes(name)) ensurePreciseForTransforms(); updateOutputName();
       });
     });
@@ -861,10 +888,12 @@
     $('#add-vfx-track').addEventListener('click', () => {
       if (state.vfxTracks < 3) state.vfxTracks += 1;
       else {
-        const removed = state.effects.filter((effect) => effect.track === 2).length;
+        const removedEffects = state.effects.filter((effect) => effect.track === 2);
         const selectedTrack = selectedEffect()?.track;
         state.effects = state.effects.filter((effect) => effect.track !== 2);
-        if (selectedTrack === 2) { state.selectedEffect = null; state.blurVisible = false; }
+        if (selectedTrack === 2) state.selectedEffect = null;
+        if (removedEffects.some((effect) => effect.id === state.blurEffectId)) { state.blurEffectId = null; state.blurVisible = false; }
+        const removed = removedEffects.length;
         state.vfxTracks = 2;
         if (removed) toast('Третья VFX-дорожка и её клипы удалены.', 'info');
       }
@@ -936,9 +965,9 @@
     $('#preview-resolution').textContent = `${state.originalWidth} × ${state.originalHeight}`; $('#width-input').value = String(state.originalWidth); $('#height-input').value = String(state.originalHeight); updateOutputName(); updateTimeline();
   });
   elements.video.addEventListener('timeupdate', () => { if (state.isDemo) return; if (elements.video.currentTime >= state.end && state.playing) { elements.video.pause(); setPlaying(false); seek(state.start); return; } seek(elements.video.currentTime, true); syncAudioPlayback(); });
-  elements.video.addEventListener('play', () => { setPlaying(true); if (state.audioContext) state.audioContext.resume().catch(() => {}); syncAudioPlayback(); });
-  elements.video.addEventListener('seeked', syncAudioPlayback);
-  elements.video.addEventListener('pause', () => { setPlaying(false); state.audioPlayers.forEach((player) => player.audio.pause()); });
+  elements.video.addEventListener('play', () => { setPlaying(true); if (state.audioContext) state.audioContext.resume().catch(() => {}); syncAudioPlayback(); queueBlurPreviewFrame(); });
+  elements.video.addEventListener('seeked', () => { syncAudioPlayback(); refreshBlurPreviewFrame(); });
+  elements.video.addEventListener('pause', () => { setPlaying(false); stopBlurPreviewUpdates(); state.audioPlayers.forEach((player) => player.audio.pause()); });
   elements.video.addEventListener('ended', () => { setPlaying(false); state.audioPlayers.forEach((player) => player.audio.pause()); seek(state.start); });
   elements.video.addEventListener('error', () => { if (!elements.video.getAttribute('src')) return; setPlaying(false); if (!desktop) toast('Этот формат не поддерживается браузерным предпросмотром.', 'warning'); });
   elements.centerPlay.addEventListener('click', togglePlayback); elements.playButton.addEventListener('click', togglePlayback);
@@ -961,7 +990,11 @@
     const pixelsPerSecond = elements.timeline.getBoundingClientRect().width / state.duration;
     if (drag.effect) {
       const effect = state.effects.find((item) => item.id === drag.effect); if (!effect) return;
-      const candidates = [{ value: 0, label: 'Начало видео' }, { value: state.duration, label: 'Конец видео' }, { value: state.start, label: 'Начало обрезки' }, { value: state.end, label: 'Конец обрезки' }, { value: state.position, label: 'Playhead' }];
+      const effectEdges = state.effects.filter((item) => item.id !== effect.id).flatMap((item) => [
+        { value: item.start, label: `Начало: ${effectDefinitions[item.kind].name}` },
+        { value: item.end, label: `Конец: ${effectDefinitions[item.kind].name}` }
+      ]);
+      const candidates = [{ value: 0, label: 'Начало видео' }, { value: state.duration, label: 'Конец видео' }, { value: state.start, label: 'Начало обрезки' }, { value: state.end, label: 'Конец обрезки' }, { value: state.position, label: 'Playhead' }, ...effectEdges];
       if (drag.mode === 'move') {
         const length = drag.end - drag.start;
         let start = clamp(drag.start + (event.clientX - drag.x) / pixelsPerSecond, 0, state.duration - length), end = start + length;
@@ -996,26 +1029,30 @@
   elements.timeline.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
     const clip = event.target.closest('.effect-clip[data-effect-id]');
-    if (clip && event.target.closest('[data-effect-delete]')) {
-      removeEffect(clip.dataset.effectId); event.preventDefault(); event.stopPropagation(); return;
-    }
     if (clip) {
       const effect = state.effects.find((item) => item.id === clip.dataset.effectId);
       selectEffect(effect.id);
-      drag = { effect: effect.id, mode: event.target.closest('[data-effect-handle]')?.dataset.effectHandle || 'move', x: event.clientX, y: event.clientY, start: effect.start, end: effect.end, track: effect.track };
+      drag = { effect: effect.id, mode: event.target.closest('[data-effect-handle]')?.dataset.effectHandle || 'move', x: event.clientX, y: event.clientY, start: effect.start, end: effect.end, track: effect.track, pointerId: event.pointerId };
     } else {
-      drag = { mode: event.target.closest('[data-drag]')?.dataset.drag || 'playhead' }; state.scrubbing = drag.mode === 'playhead' && !state.isDemo;
+      drag = { mode: event.target.closest('[data-drag]')?.dataset.drag || 'playhead', pointerId: event.pointerId }; state.scrubbing = drag.mode === 'playhead' && !state.isDemo;
+      if (drag.mode === 'playhead' && state.selectedEffect) { state.selectedEffect = null; updateEffectClips(); }
       if (state.scrubbing) { state.resumeAfterScrub = state.playing && !elements.video.paused; elements.video.pause(); state.audioPlayers.forEach((player) => player.audio.pause()); }
     }
     elements.timeline.setPointerCapture(event.pointerId); moveTimeline(event); event.preventDefault();
   });
   elements.timeline.addEventListener('pointermove', moveTimeline);
   const finishTimelineDrag = (event) => {
+    const activeDrag = drag; if (!activeDrag) return;
     drag = null; $('#snap-line').hidden = true;
     if (state.scrubbing) { const resume = state.resumeAfterScrub; state.scrubbing = false; state.resumeAfterScrub = false; seek(state.position); if (resume) togglePlayback(); }
-    updateOutputName(); if (event && elements.timeline.hasPointerCapture(event.pointerId)) elements.timeline.releasePointerCapture(event.pointerId);
+    const pointerId = event?.pointerId ?? activeDrag.pointerId;
+    if (pointerId !== undefined && elements.timeline.hasPointerCapture(pointerId)) elements.timeline.releasePointerCapture(pointerId);
+    updateOutputName();
   };
   elements.timeline.addEventListener('pointerup', finishTimelineDrag); elements.timeline.addEventListener('pointercancel', finishTimelineDrag);
+  elements.timeline.addEventListener('lostpointercapture', finishTimelineDrag);
+  window.addEventListener('pointerup', finishTimelineDrag, true); window.addEventListener('pointercancel', finishTimelineDrag, true);
+  window.addEventListener('blur', () => finishTimelineDrag());
   $$('[data-drag]').forEach((handle) => handle.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault();
     const step = event.shiftKey ? 1 : .1, direction = event.key === 'ArrowLeft' ? -1 : 1;
@@ -1063,31 +1100,72 @@
   $$('#ratio-grid button').forEach((button) => button.addEventListener('click', () => setCropRatio(button.dataset.ratio)));
   $('#crop-preview-button').addEventListener('click', () => { if (!state.crop) { setCropRatio('16:9'); return; } state.cropVisible = !state.cropVisible; elements.cropOverlay.hidden = !state.cropVisible; $('#crop-preview-button').innerHTML = `${icon('crop')}${state.cropVisible ? 'Скрыть' : 'Показать'} область на превью`; });
   setupRegionDrag($('.crop-frame'), () => state.crop, (next) => { state.crop = next; renderCrop(); updateOutputName(); }, 'crop-handle');
-  function renderBlurRegion() {
-    const frame = $('.blur-region-frame'), preview = $('#blur-region-video'), stage = $('#preview-stage').getBoundingClientRect(), rect = videoRect();
-    positionFrame(frame, state.blurRegion);
-    const x = rect.left + state.blurRegion.x * rect.width, y = rect.top + state.blurRegion.y * rect.height, scale = Math.min(1, 1280 / stage.width);
-    preview.style.width = `${stage.width}px`; preview.style.height = `${stage.height}px`;
-    preview.style.left = `${-x}px`; preview.style.top = `${-y}px`;
-    preview.style.filter = `blur(${Math.max(0, (selectedEffect('blur')?.intensity || 0) * .12)}px)`;
-    const width = Math.max(1, Math.round(stage.width * scale)), height = Math.max(1, Math.round(stage.height * scale));
+  function renderBlurFrame(frame, preview, label, effect) {
+    const region = effect.area; if (!region) return;
+    const stage = $('#preview-stage').getBoundingClientRect(), rect = videoRect();
+    positionFrame(frame, region);
+    const scale = Math.min(1, 1280 / stage.width);
+    const width = Math.max(1, Math.round(region.width * rect.width * scale)), height = Math.max(1, Math.round(region.height * rect.height * scale));
+    preview.style.width = '100%'; preview.style.height = '100%'; preview.style.left = '0px'; preview.style.top = '0px';
+    preview.style.filter = `blur(${Math.max(0, effect.intensity * .12)}px)`;
     if (preview.width !== width || preview.height !== height) { preview.width = width; preview.height = height; }
     if (elements.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      const context = preview.getContext('2d'), aspect = elements.video.videoWidth / elements.video.videoHeight;
-      let drawWidth = width, drawHeight = width / aspect, drawX = 0, drawY = (height - drawHeight) / 2;
-      if (drawHeight > height) { drawHeight = height; drawWidth = height * aspect; drawX = (width - drawWidth) / 2; drawY = 0; }
-      context.clearRect(0, 0, width, height); context.drawImage(elements.video, drawX, drawY, drawWidth, drawHeight);
+      const sourceWidth = elements.video.videoWidth, sourceHeight = elements.video.videoHeight;
+      preview.getContext('2d').drawImage(elements.video, region.x * sourceWidth, region.y * sourceHeight, region.width * sourceWidth, region.height * sourceHeight, 0, 0, width, height);
     }
-    $('.blur-label').textContent = `${Math.round(state.blurRegion.width * state.originalWidth)} × ${Math.round(state.blurRegion.height * state.originalHeight)} · область размытия`;
+    if (label) label.textContent = `${Math.round(region.width * state.originalWidth)} × ${Math.round(region.height * state.originalHeight)} · область размытия`;
   }
-  function tickBlurPreview(timestamp) {
+  function renderBlurRegion(effect = state.effects.find((item) => item.id === state.blurEffectId && item.kind === 'blur')) {
+    if (!effect) return;
+    renderBlurFrame($('#blur-region > .blur-region-frame'), $('#blur-region-video'), $('#blur-region > .blur-label'), effect);
+  }
+  function renderBlurPreviews(effects) {
+    const root = $('#blur-region'), activeIds = new Set(effects.map((effect) => effect.id));
+    $$('.blur-region-preview', root).forEach((preview) => { if (!activeIds.has(preview.dataset.blurId)) preview.remove(); });
+    effects.forEach((effect) => {
+      let container = $$('.blur-region-preview', root).find((preview) => preview.dataset.blurId === effect.id);
+      if (!container) {
+        container = document.createElement('div'); container.className = 'blur-region-preview'; container.dataset.blurId = effect.id;
+        container.innerHTML = '<div class="blur-region-frame"><canvas class="blur-region-video" aria-hidden="true"></canvas></div>';
+        root.append(container);
+      }
+      renderBlurFrame($('.blur-region-frame', container), $('.blur-region-video', container), null, effect);
+    });
+  }
+  function renderActiveBlurRegions() {
+    const blurs = state.effects.filter((effect) => effect.kind === 'blur' && effect.area && state.position >= effect.start && state.position < effect.end);
+    const primary = blurs.find((effect) => effect.id === state.blurEffectId) || blurs[0];
+    if (primary) renderBlurRegion(primary);
+    renderBlurPreviews(blurs.filter((effect) => effect.id !== primary?.id));
+  }
+  function stopBlurPreviewUpdates() {
+    if (state.blurVideoFrame !== null && elements.video.cancelVideoFrameCallback) elements.video.cancelVideoFrameCallback(state.blurVideoFrame);
+    if (state.blurAnimation) cancelAnimationFrame(state.blurAnimation);
+    state.blurVideoFrame = null; state.blurAnimation = null;
+  }
+  function queueBlurPreviewFrame() {
+    if ($('#blur-region').hidden || !state.playing || state.blurVideoFrame !== null || state.blurAnimation) return;
+    if (elements.video.requestVideoFrameCallback) {
+      state.blurVideoFrame = elements.video.requestVideoFrameCallback(() => {
+        state.blurVideoFrame = null;
+        if ($('#blur-region').hidden || !state.playing) return;
+        renderActiveBlurRegions(); queueBlurPreviewFrame();
+      });
+    } else {
+      state.blurAnimation = requestAnimationFrame(tickBlurPreview);
+    }
+  }
+  function refreshBlurPreviewFrame() {
+    if (elements.video.requestVideoFrameCallback) elements.video.requestVideoFrameCallback(() => renderActiveBlurRegions());
+    else requestAnimationFrame(() => renderActiveBlurRegions());
+  }
+  function tickBlurPreview() {
     state.blurAnimation = null;
     if ($('#blur-region').hidden || !state.playing) return;
-    if (timestamp - state.lastBlurFrame >= 33) { renderBlurRegion(); state.lastBlurFrame = timestamp; }
-    state.blurAnimation = requestAnimationFrame(tickBlurPreview);
+    renderActiveBlurRegions(); queueBlurPreviewFrame();
   }
-  setupRegionDrag($('.blur-region-frame'), () => state.blurRegion, (next) => { state.blurRegion = next; const effect = selectedEffect('blur'); if (effect) effect.area = { ...next }; renderBlurRegion(); }, 'blur-handle');
-  window.addEventListener('resize', () => { if (state.crop) renderCrop(); renderBlurRegion(); });
+  setupRegionDrag($('#blur-region > .blur-region-frame'), () => state.blurRegion, (next) => { state.blurRegion = next; const effect = selectedEffect('blur'); if (effect) effect.area = { ...next }; renderBlurRegion(); }, 'blur-handle');
+  window.addEventListener('resize', () => { if (state.crop) renderCrop(); renderActiveBlurRegions(); });
   $$('#image-format button').forEach((button) => button.addEventListener('click', () => setExportKind(button.dataset.format.toLowerCase())));
   $('#single-frame').addEventListener('change', () => { setExportKind(state.exportKind); });
   $('#fps-range').addEventListener('input', () => { setRangeFill($('#fps-range')); if (!$('#fps-range').disabled) $('#fps-value').textContent = `${$('#fps-range').value} FPS`; updateOutputName(); });
@@ -1101,6 +1179,15 @@
     if (event.key === 'Tab') { event.preventDefault(); return; }
     if (event.key === 'Escape') { closeModals(); if (state.crop) { state.cropVisible = false; elements.cropOverlay.hidden = true; } return; }
     if (elements.workspace.hidden || !elements.exportModal.hidden || !elements.helpModal.hidden || !elements.updateModal.hidden) return;
+    const editingText = event.target.matches('input:not([type="range"]):not([type="checkbox"]), select, textarea, [contenteditable="true"]');
+    if ((event.ctrlKey || event.metaKey) && event.code === 'KeyZ') {
+      if (editingText) return;
+      event.preventDefault(); if (!event.repeat) undoRemoveEffect(); return;
+    }
+    if (event.key === 'Delete' && state.selectedEffect) {
+      if (editingText) return;
+      event.preventDefault(); if (!event.repeat) removeEffect(state.selectedEffect); return;
+    }
     if (event.code === 'Space') {
       if (event.target.matches('input:not([type="range"]):not([type="checkbox"]), textarea')) return;
       event.preventDefault(); event.stopPropagation();
