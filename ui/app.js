@@ -32,7 +32,7 @@
     color: { name: 'Цвет', icon: 'film' }
   };
   const presets = {
-    quality: { codec: 'AV1', encoder: 'NVIDIA NVENC', quality: 32, label: 'Качество' },
+    quality: { codec: 'AV1', encoder: 'NVIDIA NVENC', quality: 21, label: 'Качество' },
     balance: { codec: 'HEVC', encoder: 'NVIDIA NVENC', quality: 21, label: 'Баланс' }
   };
   const videoFilters = [{ name: 'Видео', extensions: ['mp4', 'mkv', 'mov', 'avi', 'webm', 'm4v', 'wmv', 'flv', 'ts', 'm2ts'] }];

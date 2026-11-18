@@ -2,6 +2,12 @@
 
 Здесь перечислены изменения каждой версии FFConverter.
 
+## [2.1.0.1] - 2026-11-18
+
+### Изменено
+
+- Пресет «Качество» использует AV1 с CQ/CRF 21 вместо 32: заметно меньше потерь деталей и качества изображения.
+
 ## [2.1.0] - 2026-11-18
 
 ### Исправлено
@@ -128,6 +134,7 @@
 - Автоматическая проверка и скачивание обновлений с установкой после подтверждения.
 - Публикация portable ZIP через GitHub Actions.
 
+[2.1.0.1]: https://github.com/TheWhitely/FFConverter/compare/v2.1.0...v2.1.0.1
 [2.1.0]: https://github.com/TheWhitely/FFConverter/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3.4...v2.0.0
 [1.0.3.4]: https://github.com/TheWhitely/FFConverter/compare/v1.0.3.3...v1.0.3.4
