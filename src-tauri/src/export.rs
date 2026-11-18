@@ -188,9 +188,13 @@ fn effect_graph(settings: &ExportSettings, enabled_audio: &[&AudioSetting]) -> O
                 } else {
                     String::new()
                 };
-                graph.push(format!("[v{current}]split=2[vm{next}][vt{next}]"));
-                graph.push(format!("[vt{next}]trim=start={start:.6}:end={end:.6},setpts=PTS-STARTPTS,{processing}[ve{next}]"));
-                graph.push(format!("[vm{next}][ve{next}]overlay={position}eof_action=pass:enable='between(t,{start:.6},{end:.6})'[v{next}]"));
+                if effect.kind == "blur" && effect.area.is_some() {
+                    graph.push(format!("[v{current}]split=2[vm{next}][vt{next}]"));
+                    graph.push(format!("[vt{next}]setpts=PTS-STARTPTS,{processing}[ve{next}]"));
+                    graph.push(format!("[vm{next}][ve{next}]overlay={position}eof_action=pass:enable='between(t,{start:.6},{end:.6})'[v{next}]"));
+                } else {
+                    graph.push(format!("[v{current}]{processing}:enable='between(t,{start:.6},{end:.6})'[v{next}]"));
+                }
             }
             "fade" => {
                 let length = effect.duration.unwrap_or(1.0).clamp(0.05, (end - start) / 2.0);

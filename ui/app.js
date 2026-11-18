@@ -994,7 +994,7 @@
         { value: item.start, label: `Начало: ${effectDefinitions[item.kind].name}` },
         { value: item.end, label: `Конец: ${effectDefinitions[item.kind].name}` }
       ]);
-      const candidates = [{ value: 0, label: 'Начало видео' }, { value: state.duration, label: 'Конец видео' }, { value: state.start, label: 'Начало обрезки' }, { value: state.end, label: 'Конец обрезки' }, { value: state.position, label: 'Playhead' }, ...effectEdges];
+      const candidates = [{ value: 0, label: 'Начало видео' }, { value: state.duration, label: 'Конец видео' }, { value: state.start, label: 'Начало обрезки' }, { value: state.end, label: 'Конец обрезки' }, ...effectEdges];
       if (drag.mode === 'move') {
         const length = drag.end - drag.start;
         let start = clamp(drag.start + (event.clientX - drag.x) / pixelsPerSecond, 0, state.duration - length), end = start + length;
@@ -1104,14 +1104,31 @@
     const region = effect.area; if (!region) return;
     const stage = $('#preview-stage').getBoundingClientRect(), rect = videoRect();
     positionFrame(frame, region);
-    const scale = Math.min(1, 1280 / stage.width);
-    const width = Math.max(1, Math.round(region.width * rect.width * scale)), height = Math.max(1, Math.round(region.height * rect.height * scale));
-    preview.style.width = '100%'; preview.style.height = '100%'; preview.style.left = '0px'; preview.style.top = '0px';
-    preview.style.filter = `blur(${Math.max(0, effect.intensity * .12)}px)`;
+    const blurRadius = Math.max(0, effect.intensity * .12), padding = Math.ceil(blurRadius * 3), scale = Math.min(1, 1280 / stage.width);
+    const left = region.x - padding / rect.width, right = region.x + region.width + padding / rect.width;
+    const top = region.y - padding / rect.height, bottom = region.y + region.height + padding / rect.height;
+    const cssWidth = (right - left) * rect.width, cssHeight = (bottom - top) * rect.height;
+    const width = Math.max(1, Math.round(cssWidth * scale)), height = Math.max(1, Math.round(cssHeight * scale));
+    preview.style.width = `${cssWidth}px`; preview.style.height = `${cssHeight}px`;
+    preview.style.left = `${(left - region.x) * rect.width}px`; preview.style.top = `${(top - region.y) * rect.height}px`;
+    preview.style.filter = `blur(${blurRadius}px)`;
     if (preview.width !== width || preview.height !== height) { preview.width = width; preview.height = height; }
     if (elements.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
       const sourceWidth = elements.video.videoWidth, sourceHeight = elements.video.videoHeight;
-      preview.getContext('2d').drawImage(elements.video, region.x * sourceWidth, region.y * sourceHeight, region.width * sourceWidth, region.height * sourceHeight, 0, 0, width, height);
+      const sourceLeft = Math.max(0, left), sourceTop = Math.max(0, top), sourceRight = Math.min(1, right), sourceBottom = Math.min(1, bottom);
+      const sx = sourceLeft * sourceWidth, sy = sourceTop * sourceHeight, sw = (sourceRight - sourceLeft) * sourceWidth, sh = (sourceBottom - sourceTop) * sourceHeight;
+      const dx = (sourceLeft - left) * rect.width * scale, dy = (sourceTop - top) * rect.height * scale;
+      const dw = (sourceRight - sourceLeft) * rect.width * scale, dh = (sourceBottom - sourceTop) * rect.height * scale;
+      const context = preview.getContext('2d');
+      context.drawImage(elements.video, sx, sy, sw, sh, dx, dy, dw, dh);
+      if (dx > 0) context.drawImage(elements.video, sx, sy, 1, sh, 0, dy, dx, dh);
+      if (dx + dw < width) context.drawImage(elements.video, sx + sw - 1, sy, 1, sh, dx + dw, dy, width - dx - dw, dh);
+      if (dy > 0) context.drawImage(elements.video, sx, sy, sw, 1, dx, 0, dw, dy);
+      if (dy + dh < height) context.drawImage(elements.video, sx, sy + sh - 1, sw, 1, dx, dy + dh, dw, height - dy - dh);
+      if (dx > 0 && dy > 0) context.drawImage(elements.video, sx, sy, 1, 1, 0, 0, dx, dy);
+      if (dx + dw < width && dy > 0) context.drawImage(elements.video, sx + sw - 1, sy, 1, 1, dx + dw, 0, width - dx - dw, dy);
+      if (dx > 0 && dy + dh < height) context.drawImage(elements.video, sx, sy + sh - 1, 1, 1, 0, dy + dh, dx, height - dy - dh);
+      if (dx + dw < width && dy + dh < height) context.drawImage(elements.video, sx + sw - 1, sy + sh - 1, 1, 1, dx + dw, dy + dh, width - dx - dw, height - dy - dh);
     }
     if (label) label.textContent = `${Math.round(region.width * state.originalWidth)} × ${Math.round(region.height * state.originalHeight)} · область размытия`;
   }
